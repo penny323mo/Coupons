@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-primary-50 text-gray-900;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  /* Prevent overscroll bounce on iOS */
+  html, body {
+    overscroll-behavior: none;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply w-full bg-primary-600 text-white py-3 rounded-xl font-semibold text-base
+           active:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-ghost {
+    @apply text-primary-600 font-medium py-2 px-4 rounded-xl
+           active:bg-primary-50 transition-colors;
+  }
+  .card {
+    @apply bg-white rounded-2xl shadow-sm p-4;
+  }
+  .input {
+    @apply w-full border border-gray-200 rounded-xl px-4 py-3 text-base
+           focus:outline-none focus:ring-2 focus:ring-primary-400 bg-white;
+  }
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold;
+  }
+}
+
+/* Safe area insets for notched phones */
+.safe-top    { padding-top:    env(safe-area-inset-top); }
+.safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
