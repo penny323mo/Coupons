@@ -7,7 +7,7 @@
 create table if not exists public.profiles (
   id               uuid references auth.users on delete cascade primary key,
   display_name     text,
-  enabled_platforms jsonb not null default '["MPay","AlipayMacau","BOC","ICBC","FunPay","Guangfa","LusoPay","UePay"]',
+  enabled_platforms jsonb not null default '["MPay","AlipayMacau","BOC","ICBC","TaiFungPay","Guangfa","LusoPay","UePay"]',
   language         text not null default 'zh' check (language in ('zh', 'en')),
   created_at       timestamptz default now()
 );

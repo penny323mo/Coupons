@@ -2,9 +2,9 @@ export const PLATFORMS = {
   MPay:       { zh: 'MPay (澳門通)',    en: 'MPay' },
   AlipayMacau:{ zh: '支付寶澳門',       en: 'Alipay Macau' },
   BOC:        { zh: '中銀手機銀行',     en: 'BOC Mobile' },
-  ICBC:       { zh: '工銀電子支付',     en: 'ICBC Pay' },
-  FunPay:     { zh: '樂享支付',         en: 'FunPay' },
-  Guangfa:    { zh: '廣發錢包',         en: 'Guangfa Wallet' },
+  ICBC:       { zh: '工銀e支付',         en: 'ICBC e-Pay' },
+  TaiFungPay: { zh: '豐付寶',           en: 'TaiFung Pay' },
+  Guangfa:    { zh: '廣發移動支付錢包', en: 'Guangfa Wallet' },
   LusoPay:    { zh: 'LusoPay',          en: 'LusoPay' },
   UePay:      { zh: '澳門錢包 (UePay)', en: 'UePay' },
 }
