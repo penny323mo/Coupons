@@ -16,9 +16,15 @@ export default function Settings() {
   // Init from profile
   useEffect(() => {
     if (profile?.enabled_platforms) {
-      setEnabledPlatforms(profile.enabled_platforms)
+      const valid = profile.enabled_platforms.filter(k => allKeys.includes(k))
+      setEnabledPlatforms(valid)
+      
+      // Auto-clean ghost platforms (like FunPay) quietly in background
+      if (valid.length !== profile.enabled_platforms.length && updateProfile) {
+        updateProfile({ enabled_platforms: valid }).catch(() => {})
+      }
     }
-  }, [profile])
+  }, [profile, allKeys, updateProfile])
 
   function togglePlatform(key) {
     setEnabledPlatforms(prev =>

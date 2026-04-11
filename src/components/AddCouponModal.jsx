@@ -9,7 +9,7 @@ export default function AddCouponModal({ onClose, onAdded }) {
   const { user, profile } = useAuth()
   const { lang, tr } = useLang()
 
-  const enabledKeys = profile?.enabled_platforms ?? Object.keys(PLATFORMS)
+  const enabledKeys = (profile?.enabled_platforms ?? Object.keys(PLATFORMS)).filter(k => PLATFORMS[k])
 
   const [platform,   setPlatform]   = useState(enabledKeys[0] || '')
   const [faceValue,  setFaceValue]  = useState(50)
