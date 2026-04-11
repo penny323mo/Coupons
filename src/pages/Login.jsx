@@ -33,10 +33,10 @@ export default function Login() {
     try {
       if (mode === 'login') {
         const { error: err } = await supabase.auth.signInWithPassword({ email, password })
-        if (err) setError(tr.errLogin)
+        if (err) setError(err.message)
       } else {
         const { data, error: err } = await supabase.auth.signUp({ email, password })
-        if (err) { setError(tr.errRegister); return }
+        if (err) { setError(err.message); return }
         // Update display_name if provided
         if (name && data.user) {
           await supabase.from('profiles').update({ display_name: name }).eq('id', data.user.id)
