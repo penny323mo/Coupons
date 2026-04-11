@@ -15,6 +15,7 @@ export default function Login() {
   const [name,     setName]     = useState('')
   const [error,    setError]    = useState('')
   const [loading,  setLoading]  = useState(false)
+  const [emailSent, setEmailSent] = useState(false)
 
   if (user) return <Navigate to="/" replace />
 
@@ -40,6 +41,11 @@ export default function Login() {
         // Update display_name if provided
         if (name && data.user) {
           await supabase.from('profiles').update({ display_name: name }).eq('id', data.user.id)
+        }
+        // No session = email confirmation required
+        if (!data.session) {
+          setEmailSent(true)
+          return
         }
       }
     } finally {
@@ -71,6 +77,28 @@ export default function Login() {
 
         {/* Card */}
         <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-xl">
+
+          {/* Email sent screen */}
+          {emailSent ? (
+            <div className="text-center py-4">
+              <div className="text-5xl mb-4">📧</div>
+              <h2 className="text-xl font-bold text-gray-800 mb-2">
+                {lang === 'zh' ? '確認電郵已發送' : 'Check your email'}
+              </h2>
+              <p className="text-gray-500 text-sm mb-6">
+                {lang === 'zh'
+                  ? `請查收 ${email} 的確認電郵，點擊連結後即可登入。`
+                  : `We sent a confirmation link to ${email}. Click it to activate your account.`}
+              </p>
+              <button
+                onClick={() => { setEmailSent(false); setMode('login') }}
+                className="btn-primary"
+              >
+                {tr.login}
+              </button>
+            </div>
+          ) : (
+          <>
           <h2 className="text-xl font-bold text-gray-800 mb-6">
             {mode === 'login' ? tr.loginTitle : tr.registerTitle}
           </h2>
@@ -149,6 +177,8 @@ export default function Login() {
               {mode === 'login' ? tr.register : tr.login}
             </button>
           </div>
+          </>
+          )}
         </div>
       </div>
     </div>
