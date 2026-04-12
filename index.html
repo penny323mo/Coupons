@@ -9,6 +9,25 @@
     <meta name="apple-mobile-web-app-title" content="MO Rewards" />
     <link rel="apple-touch-icon" href="/Coupons/icon-192.png" />
     <title>澳門消費大獎賞 | Macau Rewards</title>
+    <!-- NUKE all service workers & caches - fixes stale PWA showing old platform names -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(regs) {
+          var killed = false;
+          regs.forEach(function(r) { r.unregister(); killed = true; });
+          if ('caches' in window) {
+            caches.keys().then(function(names) {
+              names.forEach(function(n) { caches.delete(n); killed = true; });
+            });
+          }
+          // If we killed anything, force a clean reload (once only)
+          if (killed && !sessionStorage.getItem('sw_nuked')) {
+            sessionStorage.setItem('sw_nuked', '1');
+            location.reload();
+          }
+        });
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
