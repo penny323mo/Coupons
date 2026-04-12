@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useLang } from '../contexts/LangContext'
-import { PLATFORMS } from '../i18n/translations'
+import { PLATFORMS, normalizePlatform } from '../i18n/translations'
 
 export default function Settings() {
   const { user, profile, updateProfile, signOut } = useAuth()
@@ -16,12 +16,17 @@ export default function Settings() {
   // Init from profile
   useEffect(() => {
     if (profile?.enabled_platforms) {
-      const valid = profile.enabled_platforms.filter(k => allKeys.includes(k))
-      setEnabledPlatforms(valid)
+      // Normalize legacy keys (e.g. 樂享支付 → TaiFungPay) then filter to valid
+      const normalized = profile.enabled_platforms
+        .map(normalizePlatform)
+        .filter((k, i, arr) => allKeys.includes(k) && arr.indexOf(k) === i)
+      setEnabledPlatforms(normalized)
       
-      // Auto-clean ghost platforms (like FunPay) quietly in background
-      if (valid.length !== profile.enabled_platforms.length && updateProfile) {
-        updateProfile({ enabled_platforms: valid }).catch(() => {})
+      // Auto-clean ghost/legacy platforms in DB
+      const changed = normalized.length !== profile.enabled_platforms.length ||
+        normalized.some((k, i) => k !== profile.enabled_platforms[i])
+      if (changed && updateProfile) {
+        updateProfile({ enabled_platforms: normalized }).catch(() => {})
       }
     }
   }, [profile, allKeys, updateProfile])

@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { useLang } from '../contexts/LangContext'
 import { effectiveStatus } from '../lib/dates'
-import { PLATFORMS } from '../i18n/translations'
+import { PLATFORMS, platformLabel, normalizePlatform } from '../i18n/translations'
 import CouponCard      from '../components/CouponCard'
 import AddCouponModal  from '../components/AddCouponModal'
 
@@ -41,13 +41,15 @@ export default function Coupons() {
 
   useEffect(() => { fetchCoupons() }, [fetchCoupons])
 
-  const enabledPlatforms = profile?.enabled_platforms ?? Object.keys(PLATFORMS)
+  const enabledPlatforms = (profile?.enabled_platforms ?? Object.keys(PLATFORMS))
+    .map(normalizePlatform)
+    .filter((k, i, arr) => PLATFORMS[k] && arr.indexOf(k) === i)
 
   // Filter
   const filtered = coupons.filter(c => {
     const effStatus = effectiveStatus(c)
     if (statusFilter  !== 'all' && effStatus !== statusFilter)       return false
-    if (platformFilter !== 'all' && c.platform !== platformFilter)   return false
+    if (platformFilter !== 'all' && normalizePlatform(c.platform) !== platformFilter)   return false
     return true
   })
 
@@ -121,7 +123,7 @@ export default function Coupons() {
               className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors
                 ${platformFilter === key ? 'bg-primary-600 text-white' : 'bg-white text-gray-500 shadow-sm'}`}
             >
-              {PLATFORMS[key]?.[lang] ?? key}
+              {platformLabel(key, lang)}
             </button>
           ))}
         </div>

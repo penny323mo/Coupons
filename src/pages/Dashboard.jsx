@@ -6,7 +6,7 @@ import {
   isDrawDay, isUseDay, isProgramActive, isProgramBefore, isProgramAfter,
   isCouponActive, effectiveStatus, getCurrentDrawWeekStart, formatExpiry,
 } from '../lib/dates'
-import { PLATFORMS } from '../i18n/translations'
+import { PLATFORMS, normalizePlatform, platformLabel } from '../i18n/translations'
 import AddCouponModal from '../components/AddCouponModal'
 import UseModal       from '../components/UseModal'
 
@@ -60,7 +60,21 @@ export default function Dashboard() {
       .select('*')
       .eq('user_id', user.id)
       .order('drawn_date', { ascending: false })
-    setCoupons(data ?? [])
+    const rows = data ?? []
+
+    // Auto-fix legacy platform keys in DB (fire-and-forget)
+    rows.forEach(c => {
+      const canonical = normalizePlatform(c.platform)
+      if (canonical !== c.platform) {
+        supabase.from('coupons')
+          .update({ platform: canonical })
+          .eq('id', c.id)
+          .then(() => {})
+        c.platform = canonical // fix in-memory too
+      }
+    })
+
+    setCoupons(rows)
     setLoading(false)
   }, [user.id])
 
@@ -162,7 +176,7 @@ export default function Dashboard() {
           ) : (
             <div className="space-y-3">
               {activeCoupons.map(coupon => {
-                const platformLabel = PLATFORMS[coupon.platform]?.[lang] ?? coupon.platform
+                const pLabel = platformLabel(coupon.platform, lang)
                 return (
                   <div key={coupon.id} className="card flex items-center gap-3">
                     <div className="bg-primary-600 text-white font-bold text-xl rounded-xl w-14 h-14 flex items-center justify-center shrink-0">
@@ -170,7 +184,7 @@ export default function Dashboard() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="font-semibold text-gray-800">MOP {coupon.face_value}</div>
-                      <div className="text-sm text-gray-500">{platformLabel}</div>
+                      <div className="text-sm text-gray-500">{pLabel}</div>
                       <div className="text-xs text-orange-500 mt-0.5">
                         {tr.expiresOn} {formatExpiry(coupon.drawn_date, lang)}
                       </div>

@@ -2,14 +2,16 @@ import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { useLang } from '../contexts/LangContext'
-import { PLATFORMS, FACE_VALUES } from '../i18n/translations'
+import { PLATFORMS, FACE_VALUES, normalizePlatform, platformLabel } from '../i18n/translations'
 import { todayStr } from '../lib/dates'
 
 export default function AddCouponModal({ onClose, onAdded }) {
   const { user, profile } = useAuth()
   const { lang, tr } = useLang()
 
-  const enabledKeys = (profile?.enabled_platforms ?? Object.keys(PLATFORMS)).filter(k => PLATFORMS[k])
+  const enabledKeys = (profile?.enabled_platforms ?? Object.keys(PLATFORMS))
+    .map(normalizePlatform)
+    .filter((k, i, arr) => PLATFORMS[k] && arr.indexOf(k) === i)
 
   const [platform,   setPlatform]   = useState(enabledKeys[0] || '')
   const [faceValue,  setFaceValue]  = useState(50)
@@ -54,7 +56,7 @@ export default function AddCouponModal({ onClose, onAdded }) {
               onChange={e => setPlatform(e.target.value)}
             >
               {enabledKeys.map(key => (
-                <option key={key} value={key}>{PLATFORMS[key]?.[lang] ?? key}</option>
+                <option key={key} value={key}>{platformLabel(key, lang)}</option>
               ))}
             </select>
           </div>

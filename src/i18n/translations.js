@@ -9,6 +9,48 @@ export const PLATFORMS = {
   UePay:      { zh: '澳門錢包 (UePay)', en: 'UePay' },
 }
 
+// Map ALL possible legacy / stale platform keys → current canonical key
+// Add any old names here as they come up
+export const LEGACY_PLATFORM_MAP = {
+  // Old TaiFungPay variants
+  '樂享支付':    'TaiFungPay',
+  '樂享':        'TaiFungPay',
+  'FunPay':      'TaiFungPay',
+  'funpay':      'TaiFungPay',
+  'Funpay':      'TaiFungPay',
+  'fun_pay':     'TaiFungPay',
+  'LokHong':     'TaiFungPay',
+  'lok_hong':    'TaiFungPay',
+  'TaiFung':     'TaiFungPay',
+  'taifungpay':  'TaiFungPay',
+  '豐付寶':      'TaiFungPay',
+}
+
+/**
+ * Normalise a platform key.
+ * If it's a known legacy key, return the canonical key.
+ * Otherwise return as-is.
+ */
+export function normalizePlatform(key) {
+  if (!key) return key
+  if (PLATFORMS[key]) return key                    // already canonical
+  if (LEGACY_PLATFORM_MAP[key]) return LEGACY_PLATFORM_MAP[key]
+  // Case-insensitive fallback
+  const lower = key.toLowerCase()
+  for (const [legacy, canonical] of Object.entries(LEGACY_PLATFORM_MAP)) {
+    if (legacy.toLowerCase() === lower) return canonical
+  }
+  return key // truly unknown, return as-is
+}
+
+/**
+ * Get display label for a platform key, handling legacy keys.
+ */
+export function platformLabel(key, lang) {
+  const canonical = normalizePlatform(key)
+  return PLATFORMS[canonical]?.[lang] ?? canonical
+}
+
 export const FACE_VALUES = [10, 20, 50, 100, 200]
 
 export const PROGRAM_START = new Date('2026-04-10')

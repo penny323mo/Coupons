@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useLang } from '../contexts/LangContext'
-import { PLATFORMS } from '../i18n/translations'
+import { platformLabel as getPlatformLabel } from '../i18n/translations'
 import { effectiveStatus, formatDate, formatExpiry } from '../lib/dates'
 import UseModal from './UseModal'
 
@@ -23,7 +23,7 @@ export default function CouponCard({ coupon, onRefresh }) {
   const [confirming, setConfirming] = useState(false)
 
   const status        = effectiveStatus(coupon)
-  const platformLabel = PLATFORMS[coupon.platform]?.[lang] ?? coupon.platform
+  const platformLbl = getPlatformLabel(coupon.platform, lang)
 
   async function handleDelete() {
     if (!confirming) { setConfirming(true); return }
@@ -47,7 +47,7 @@ export default function CouponCard({ coupon, onRefresh }) {
               {tr[status]}
             </span>
           </div>
-          <div className="text-sm text-gray-500">{platformLabel}</div>
+          <div className="text-sm text-gray-500">{platformLbl}</div>
 
           {status === 'unused' && (
             <div className="text-xs text-orange-500 mt-1">
