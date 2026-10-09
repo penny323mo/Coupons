@@ -41,7 +41,9 @@ function WalletCard({ platform, coupons }) {
   const activeTotal = activeGov.reduce((s, c) => s + c.face_value, 0)
   const usable = active.some(c => canUseOn(c))
   const usableGov = activeGov.some(c => canUseOn(c))
-  const full = claimed >= WEEKLY_CLAIMS
+  // Claiming only happens Fri–Sun; on Mon–Thu the count means nothing, so it is hidden
+  const claimDay = isClaimDay()
+  const full = claimDay && claimed >= WEEKLY_CLAIMS
 
   // One tap at the till: mark used today, with an undo in the toast
   async function use(coupon) {
@@ -69,10 +71,12 @@ function WalletCard({ platform, coupons }) {
         </span>
       </div>
       <div className="wallet-body">
-        <div className="claimed">
-          <span><strong>{claimed}</strong><em>/{WEEKLY_CLAIMS}</em> {tr.claimedShort}</span>
-          <Battery value={claimed} max={WEEKLY_CLAIMS} tone={full ? 'blue' : 'green'} />
-        </div>
+        {claimDay && (
+          <div className="claimed">
+            <span><strong>{claimed}</strong><em>/{WEEKLY_CLAIMS}</em> {tr.claimedShort}</span>
+            <Battery value={claimed} max={WEEKLY_CLAIMS} tone={full ? 'blue' : 'green'} />
+          </div>
+        )}
         <div className="wallet-total"><strong>{activeTotal}</strong><span>MOP</span></div>
         <div className="vchips" role="group" aria-label={tr.activeList}>
           {active.map(c => <VoucherChip key={c.id} coupon={c} onUse={use} />)}
