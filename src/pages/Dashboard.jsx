@@ -5,11 +5,12 @@ import { useUI } from '../contexts/UIContext'
 import { useCoupons } from '../contexts/CouponsContext'
 import { PLATFORMS, enabledPlatforms, platformLabel } from '../lib/platforms'
 import {
-  currentCampaign, campaignState, campaignWeek, isClaimDay, claimWindow,
-  effectiveStatus, couponKind, canUseOn, parseDate, formatDay, todayStr,
+  currentCampaign, campaignState, campaignWeek,
+  effectiveStatus, couponKind, canUseOn, todayStr,
   roundNumber, archivedCampaigns, couponsOfCampaign, roundStats,
 } from '../lib/dates'
 import { USE_MULTIPLE } from '../lib/campaigns'
+import InfoCard from '../components/InfoCard'
 
 function VoucherChip({ coupon, onUse }) {
   const { tr } = useLang()
@@ -19,9 +20,11 @@ function VoucherChip({ coupon, onUse }) {
     : `${tr[kind]}${coupon.store_name ? ` · ${coupon.store_name}` : ''}`
   return (
     <button type="button" className={`vchip ${kind}`} onClick={() => onUse(coupon)} aria-label={label} title={label}>
-      {kind === 'gov' && <><strong>{coupon.face_value}</strong><small>{tr.chipMin(coupon.face_value * USE_MULTIPLE)}</small></>}
-      {kind === 'merchant_discount' && <><strong>−{coupon.face_value}</strong><small>{tr.chipDeal}</small></>}
-      {kind === 'merchant_gift' && <><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 11h16v9H4zM3 7.5h18V11H3zM12 7.5V20M12 7.5S10.5 3.5 8 4.2 7.6 7.5 12 7.5Zm0 0s1.5-4 4-3.3.4 3.3-4 3.3Z" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" /></svg><small>{tr.chipGift}</small></>}
+      <span className="ticket">
+        {kind === 'gov' && <><strong>{coupon.face_value}</strong><small>{tr.chipMin(coupon.face_value * USE_MULTIPLE)}</small></>}
+        {kind === 'merchant_discount' && <><strong>−{coupon.face_value}</strong><small>{tr.chipDeal}</small></>}
+        {kind === 'merchant_gift' && <><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 11h16v9H4zM3 7.5h18V11H3zM12 7.5V20M12 7.5S10.5 3.5 8 4.2 7.6 7.5 12 7.5Zm0 0s1.5-4 4-3.3.4 3.3-4 3.3Z" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" /></svg><small>{tr.chipGift}</small></>}
+      </span>
     </button>
   )
 }
@@ -49,6 +52,22 @@ function WalletCard({ platform, coupons }) {
       label: tr.undo,
       run: () => updateCoupons(coupon.id, { status: 'unused', used_date: null }),
     })
+  }
+
+  if (!active.length) {
+    return (
+      <article className="card wallet empty">
+        <div className="wallet-head">
+          <span className="wallet-dot" style={{ '--tint': info.tint }} aria-hidden="true" />
+          <span className="account-name">{info[lang]}</span>
+          <span className="wallet-none">{tr.noVouchers}</span>
+          <span className="wallet-actions">
+            <button type="button" className="mini-btn plus" onClick={() => openAdd({ platform })}
+              aria-label={`${tr.walletRecord} · ${info[lang]}`}>＋</button>
+          </span>
+        </div>
+      </article>
+    )
   }
 
   return (
@@ -85,18 +104,8 @@ export default function Dashboard() {
   const today = new Date()
   const campaign = currentCampaign(today)
   const state = campaignState(campaign, today)
-  const claimDay = isClaimDay(today)
   const wallets = enabledPlatforms(profile)
 
-  // Days left until the Friday 00:00 clear, counting today
-  const untilClear = ((5 - today.getDay() + 7) % 7) || 7
-  const nextClaim = claimWindow(today).start
-
-  let summary
-  if (state === 'before') summary = tr.summaryBefore(formatDay(parseDate(campaign.start), lang, true))
-  else if (state === 'after') summary = tr.summaryAfter(formatDay(parseDate(campaign.end), lang, true))
-  else if (claimDay) summary = tr.summaryClaim
-  else summary = campaign.anyDayUse ? tr.summaryUse : tr.summaryUseOld
 
   const roundCoupons = couponsOfCampaign(coupons, campaign)
   // Only show finished rounds that have records
@@ -104,35 +113,21 @@ export default function Dashboard() {
   const active = roundCoupons
     .filter(c => effectiveStatus(c) === 'unused')
     .sort((a, b) => b.face_value - a.face_value)
-  const usableValue = active.filter(c => couponKind(c) === 'gov' && canUseOn(c)).reduce((s, c) => s + c.face_value, 0)
 
   return (
     <>
-      <section className="hero">
+      <section className="hero hero-slim">
         <div>
           <p className="eyebrow">
             {tr.round(roundNumber(campaign))} · {campaign.short[lang]}{state === 'active' ? ` · ${tr.weekOf(campaignWeek(campaign, today), campaign.weeks)}` : ''}
           </p>
-          <h1>{tr.overview}</h1>
-          <p className="summary">{summary}</p>
         </div>
         <div className="hero-actions">
           <button type="button" className="capsule lens" onClick={() => openAdd()} disabled={!wallets.length}>{tr.record}</button>
         </div>
       </section>
 
-      {state === 'active' && (
-        <section className="today glass">
-          <div>
-            <strong>{claimDay ? tr.todayClaim : tr.todayUse}</strong>
-            <p>{claimDay ? tr.clearHint : tr.claimNext(formatDay(nextClaim, lang, true))}</p>
-          </div>
-          <div className="today-figure">
-            <strong>MOP {usableValue}</strong>
-            <span>{tr.daysLeft(untilClear)}</span>
-          </div>
-        </section>
-      )}
+      <InfoCard campaign={campaign} state={state} active={active} />
 
       <section>
         <div className="section-heading">
@@ -142,7 +137,7 @@ export default function Dashboard() {
         {wallets.length === 0
           ? <article className="card notice">{tr.noWallets}</article>
           : (
-            <div className="cards">
+            <div className={`cards density-${wallets.length <= 3 ? 'roomy' : wallets.length <= 5 ? 'normal' : 'dense'}`}>
               {wallets.map(p => (
                 <WalletCard key={p} platform={p} coupons={roundCoupons.filter(c => c.platform === p)} />
               ))}
