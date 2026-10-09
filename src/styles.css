@@ -975,3 +975,9 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 .toast.error { background: linear-gradient(135deg, #ffffffd8, #fdeceab0); white-space: normal; max-width: calc(100% - 32px); }
 .toast.error .tick { background: radial-gradient(circle at 35% 30%, #ff8a80, var(--red) 65%); box-shadow: 0 0 12px #e5342a80; }
 .toast.error .toast-text { white-space: normal; font-size: 13px; }
+
+/* Vouchers in hand, grouped by wallet */
+.wallet-groups { display: flex; flex-direction: column; gap: 16px; }
+.group-head { display: flex; align-items: center; gap: 9px; margin: 0 6px 8px; }
+.group-head strong { font-size: 14px; font-weight: 650; }
+.group-head .muted { margin-left: auto; font-size: 11px; font-variant-numeric: tabular-nums; }

@@ -21,7 +21,7 @@ function Tile({ coupon, kind, status }) {
   )
 }
 
-export default function CouponRow({ coupon }) {
+export default function CouponRow({ coupon, hideWallet = false }) {
   const { lang, tr } = useLang()
   const { showToast } = useUI()
   const { updateCoupons, deleteCoupon } = useCoupons()
@@ -39,7 +39,7 @@ export default function CouponRow({ coupon }) {
     ? `MOP ${coupon.face_value}`
     : coupon.store_name || tr[kind]
   const sub = [
-    platformLabel(coupon.platform, lang),
+    hideWallet ? null : platformLabel(coupon.platform, lang),
     kind === 'gov' ? null : coupon.store_name ? tr[kind] : tr.anyMerchant,
   ].filter(Boolean).join(' · ')
 

@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { useLang } from '../contexts/LangContext'
 import { useUI } from '../contexts/UIContext'
 import { useCoupons } from '../contexts/CouponsContext'
-import { PLATFORMS, enabledPlatforms } from '../lib/platforms'
+import { PLATFORMS, enabledPlatforms, platformLabel } from '../lib/platforms'
 import {
   currentCampaign, campaignState, campaignWeek, isClaimDay, isInClaimWindow, claimWindow,
   effectiveStatus, couponKind, canUseOn, getExpiryDate, parseDate, formatDay, WEEKLY_CLAIMS,
@@ -80,6 +80,11 @@ export default function Dashboard() {
   const active = roundCoupons
     .filter(c => effectiveStatus(c) === 'unused')
     .sort((a, b) => getExpiryDate(a) - getExpiryDate(b) || b.face_value - a.face_value)
+  // Group by wallet, in the same order as the wallet cards, so each till payment reads as one block
+  const walletOrder = [...wallets, ...active.map(c => c.platform).filter(p => !wallets.includes(p))]
+  const groups = walletOrder
+    .map(p => ({ platform: p, items: active.filter(c => c.platform === p) }))
+    .filter(g => g.items.length > 0)
   const usableValue = active.filter(c => couponKind(c) === 'gov' && canUseOn(c)).reduce((s, c) => s + c.face_value, 0)
 
   return (
@@ -139,8 +144,21 @@ export default function Dashboard() {
             <p>{tr.noActiveHint}</p>
           </div>
         ) : (
-          <div className="list">
-            {active.map(c => <CouponRow key={c.id} coupon={c} />)}
+          <div className="wallet-groups">
+            {groups.map(g => (
+              <div key={g.platform} className="wallet-group">
+                <div className="group-head">
+                  <span className="wallet-dot" style={{ '--tint': PLATFORMS[g.platform]?.tint }} aria-hidden="true" />
+                  <strong>{platformLabel(g.platform, lang)}</strong>
+                  <span className="muted">
+                    MOP {g.items.filter(c => couponKind(c) === 'gov').reduce((t, c) => t + c.face_value, 0)} · {tr.count(g.items.length)}
+                  </span>
+                </div>
+                <div className="list">
+                  {g.items.map(c => <CouponRow key={c.id} coupon={c} hideWallet />)}
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </section>
