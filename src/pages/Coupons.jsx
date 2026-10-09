@@ -3,7 +3,6 @@ import { useAuth } from '../contexts/AuthContext'
 import { useLang } from '../contexts/LangContext'
 import { useUI } from '../contexts/UIContext'
 import { useCoupons } from '../contexts/CouponsContext'
-import { CAMPAIGNS } from '../lib/campaigns'
 import { enabledPlatforms, platformLabel } from '../lib/platforms'
 import { effectiveStatus, couponKind, campaignOfCoupon, currentCampaign, KINDS } from '../lib/dates'
 import CouponRow from '../components/CouponRow'
@@ -20,10 +19,10 @@ export default function Coupons() {
   const [status,   setStatus]   = useState('unused')
   const [platform, setPlatform] = useState('all')
   const [kind,     setKind]     = useState('all')
-  const [round,    setRound]    = useState(currentCampaign().id)
-
-  const wallets = [...new Set([...enabledPlatforms(profile), ...coupons.map(c => c.platform)])]
-  const inRound = coupons.filter(c => round === 'all' || campaignOfCoupon(c).id === round)
+  // Only the current round lives here; finished rounds are in the archive
+  const round = currentCampaign().id
+  const inRound = coupons.filter(c => campaignOfCoupon(c).id === round)
+  const wallets = [...new Set([...enabledPlatforms(profile), ...inRound.map(c => c.platform)])]
 
   const filtered = inRound.filter(c =>
     (status === 'all' || effectiveStatus(c) === status)
@@ -49,10 +48,6 @@ export default function Coupons() {
         options={STATUS.map(s => ({ value: s, label: s === 'all' ? tr.all : tr[s] }))} />
 
       <div className="filters">
-        <select value={round} onChange={e => setRound(e.target.value)} aria-label={tr.allRounds}>
-          <option value="all">{tr.allRounds}</option>
-          {CAMPAIGNS.map(c => <option key={c.id} value={c.id}>{c.short[lang]}</option>)}
-        </select>
         <select value={platform} onChange={e => setPlatform(e.target.value)} aria-label={tr.allWallets}>
           <option value="all">{tr.allWallets}</option>
           {wallets.map(k => <option key={k} value={k}>{platformLabel(k, lang)}</option>)}

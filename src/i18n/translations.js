@@ -79,6 +79,21 @@ export const t = {
     daysLeft:      n => n <= 1 ? '今日最後一日' : `仲有 ${n} 日`,
     notYetUsable:  '週一至四先用得',
 
+    // Rounds & archive
+    round:         n => `第 ${n} 關`,
+    archive:       '封存歷史',
+    archiveHint:   '完咗嘅關卡',
+    archived:      '已封存',
+    back:          '‹ 返回',
+    archiveSummary:(n, s) => `記錄 ${n} 張 · 慳咗 MOP ${s}`,
+    statCount:     '記錄',
+    statUsed:      '用咗',
+    statSaved:     '慳咗 MOP',
+    statWasted:    '過期冇用 MOP',
+    statRate:      '使用率',
+    archiveEmpty:  '呢一關冇記錄',
+    archiveNote:   '封存咗嘅券唔會再計入總覽同我的券。',
+
     // Coupons page
     couponsTitle:  '我的券',
     couponsSummary:(u, s) => `${u} 張未用 · 已慳 MOP ${s}`,
@@ -258,6 +273,20 @@ export const t = {
     lastDay:       d => `Use by ${d}`,
     daysLeft:      n => n <= 1 ? 'Last day' : `${n} days left`,
     notYetUsable:  'Mon – Thu only',
+
+    round:         n => `Round ${n}`,
+    archive:       'Archive',
+    archiveHint:   'Finished rounds',
+    archived:      'Archived',
+    back:          '‹ Back',
+    archiveSummary:(n, s) => `${n} recorded · saved MOP ${s}`,
+    statCount:     'Recorded',
+    statUsed:      'Used',
+    statSaved:     'Saved MOP',
+    statWasted:    'Expired MOP',
+    statRate:      'Use rate',
+    archiveEmpty:  'Nothing recorded in this round',
+    archiveNote:   'Archived vouchers no longer count on Overview or Coupons.',
 
     couponsTitle:  'Coupons',
     couponsSummary:(u, s) => `${u} unused · saved MOP ${s}`,

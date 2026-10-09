@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard'
 import Coupons   from './pages/Coupons'
 import Calc      from './pages/Calc'
 import Settings  from './pages/Settings'
+import Archive   from './pages/Archive'
 
 function RequireAuth({ children }) {
   const { user, loading } = useAuth()
@@ -24,6 +25,7 @@ export default function App() {
         <Route path="coupons"  element={<Coupons />} />
         <Route path="calc"     element={<Calc />} />
         <Route path="settings" element={<Settings />} />
+        <Route path="archive/:id" element={<Archive />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

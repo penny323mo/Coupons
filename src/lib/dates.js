@@ -168,3 +168,33 @@ export function formatDate(dateStr, lang = 'zh', withWeekday = false) {
   if (!dateStr) return ''
   return formatDay(parseDate(dateStr), lang, withWeekday)
 }
+
+/* ---------- Rounds & archive ---------- */
+
+/** 1-based round ("關") number of a campaign. */
+export function roundNumber(campaign) {
+  return CAMPAIGNS.findIndex(c => c.id === campaign.id) + 1
+}
+
+/** Finished rounds other than the current one, newest first. */
+export function archivedCampaigns(date = new Date()) {
+  const current = currentCampaign(date)
+  return CAMPAIGNS.filter(c => c.id !== current.id && campaignState(c, date) === 'after').reverse()
+}
+
+export function couponsOfCampaign(coupons, campaign) {
+  return coupons.filter(c => campaignOfCoupon(c).id === campaign.id)
+}
+
+/** Totals for one round. */
+export function roundStats(coupons) {
+  const used = coupons.filter(c => c.status === 'used')
+  const expired = coupons.filter(c => effectiveStatus(c) === 'expired')
+  return {
+    count: coupons.length,
+    used: used.length,
+    saved: used.reduce((s, c) => s + c.face_value, 0),
+    wasted: expired.filter(c => couponKind(c) === 'gov').reduce((s, c) => s + c.face_value, 0),
+    rate: coupons.length ? Math.round((used.length / coupons.length) * 100) : 0,
+  }
+}

@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useLang } from '../contexts/LangContext'
 import { useUI } from '../contexts/UIContext'
@@ -6,6 +7,7 @@ import { PLATFORMS, enabledPlatforms } from '../lib/platforms'
 import {
   currentCampaign, campaignState, campaignWeek, isClaimDay, isInClaimWindow, claimWindow,
   effectiveStatus, couponKind, canUseOn, getExpiryDate, parseDate, formatDay, WEEKLY_CLAIMS,
+  roundNumber, archivedCampaigns, couponsOfCampaign, roundStats,
 } from '../lib/dates'
 import CouponRow from '../components/CouponRow'
 import { Battery, Spinner } from '../components/ui'
@@ -67,7 +69,9 @@ export default function Dashboard() {
   else if (claimDay) summary = tr.summaryClaim
   else summary = campaign.anyDayUse ? tr.summaryUse : tr.summaryUseOld
 
-  const active = coupons
+  const roundCoupons = couponsOfCampaign(coupons, campaign)
+  const archive = archivedCampaigns(today)
+  const active = roundCoupons
     .filter(c => effectiveStatus(c) === 'unused')
     .sort((a, b) => getExpiryDate(a.drawn_date) - getExpiryDate(b.drawn_date) || b.face_value - a.face_value)
   const usableValue = active.filter(c => couponKind(c) === 'gov' && canUseOn(c)).reduce((s, c) => s + c.face_value, 0)
@@ -77,7 +81,7 @@ export default function Dashboard() {
       <section className="hero">
         <div>
           <p className="eyebrow">
-            {campaign.short[lang]}{state === 'active' ? ` · ${tr.weekOf(campaignWeek(campaign, today), campaign.weeks)}` : ''}
+            {tr.round(roundNumber(campaign))} · {campaign.short[lang]}{state === 'active' ? ` · ${tr.weekOf(campaignWeek(campaign, today), campaign.weeks)}` : ''}
           </p>
           <h1>{tr.overview}</h1>
           <p className="summary">{summary}</p>
@@ -110,7 +114,7 @@ export default function Dashboard() {
           : (
             <div className="cards">
               {wallets.map(p => (
-                <WalletCard key={p} platform={p} coupons={coupons.filter(c => c.platform === p)} />
+                <WalletCard key={p} platform={p} coupons={roundCoupons.filter(c => c.platform === p)} />
               ))}
             </div>
           )}
@@ -134,6 +138,33 @@ export default function Dashboard() {
           </div>
         )}
       </section>
+
+      {archive.length > 0 && (
+        <section>
+          <div className="section-heading">
+            <h2>{tr.archive}</h2>
+            <span className="muted">{tr.archiveHint}</span>
+          </div>
+          <div className="list">
+            {archive.map(c => {
+              const stats = roundStats(couponsOfCampaign(coupons, c))
+              return (
+                <Link key={c.id} to={`/archive/${c.id}`} className="card archive-card">
+                  <span className="archive-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="24" height="24"><path d="M3.5 5.5h17v4h-17zM5 9.5v9a1.5 1.5 0 0 0 1.5 1.5h11a1.5 1.5 0 0 0 1.5-1.5v-9M10 13.5h4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                  </span>
+                  <span className="coupon-info">
+                    <span className="coupon-sub">{tr.round(roundNumber(c))} · {tr.archived}</span>
+                    <strong>{c.name[lang]}</strong>
+                    <span className="coupon-sub">{tr.archiveSummary(stats.count, stats.saved)}</span>
+                  </span>
+                  <span className="chevron" aria-hidden="true">›</span>
+                </Link>
+              )
+            })}
+          </div>
+        </section>
+      )}
     </>
   )
 }

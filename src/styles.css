@@ -823,3 +823,37 @@ summary { cursor: pointer; font-size: 13px; font-weight: 600; padding: 8px 0; mi
   }
   .lens-layer { display: none; }
 }
+
+/* ---------- Archive ---------- */
+
+.archive-card { display: flex; align-items: center; gap: 12px; padding: 12px 14px; color: inherit; text-decoration: none; min-height: 72px; }
+.archive-card:active { scale: .98; }
+.archive-icon {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 15px;
+  color: var(--muted);
+  background: linear-gradient(150deg, #ffffffa0, #ffffff30 60%, #dbe6f160);
+  border: 1px solid #ffffffc0;
+  box-shadow: inset 0 1px 2px #fff, 0 3px 8px #2a4a6a1a;
+}
+.archive-card .coupon-info { flex: 1; }
+.chevron { font-size: 26px; color: var(--muted); line-height: 1; }
+a.capsule { text-decoration: none; }
+
+.stats {
+  display: grid !important;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  padding: 14px 10px;
+}
+.stats > div { display: flex; flex-direction: column; align-items: center; text-align: center; min-width: 0; }
+.stats strong { font-size: 22px; font-weight: 450; letter-spacing: -.6px; font-variant-numeric: tabular-nums; }
+.stats strong.warn { color: var(--warn); }
+.stats em { font-style: normal; font-size: 13px; color: var(--muted); }
+.stats span { font-size: 10px; color: var(--muted); margin-top: 2px; }
+.caption.center { text-align: center; }
+h1.title-sm { font-size: 22px; }
