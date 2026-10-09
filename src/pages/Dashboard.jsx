@@ -5,12 +5,11 @@ import { useUI } from '../contexts/UIContext'
 import { useCoupons } from '../contexts/CouponsContext'
 import { PLATFORMS, enabledPlatforms, platformLabel } from '../lib/platforms'
 import {
-  currentCampaign, campaignState, campaignWeek, isClaimDay, isInClaimWindow, claimWindow,
-  effectiveStatus, couponKind, canUseOn, parseDate, formatDay, todayStr, WEEKLY_CLAIMS,
+  currentCampaign, campaignState, campaignWeek, isClaimDay, claimWindow,
+  effectiveStatus, couponKind, canUseOn, parseDate, formatDay, todayStr,
   roundNumber, archivedCampaigns, couponsOfCampaign, roundStats,
 } from '../lib/dates'
 import { USE_MULTIPLE } from '../lib/campaigns'
-import { Battery } from '../components/ui'
 
 function VoucherChip({ coupon, onUse }) {
   const { tr } = useLang()
@@ -33,7 +32,6 @@ function WalletCard({ platform, coupons }) {
   const { updateCoupons } = useCoupons()
   const navigate = useNavigate()
   const info = PLATFORMS[platform]
-  const claimed = coupons.filter(c => couponKind(c) === 'gov' && isInClaimWindow(c)).length
   const active = coupons
     .filter(c => effectiveStatus(c) === 'unused')
     .sort((a, b) => KIND_ORDER[couponKind(a)] - KIND_ORDER[couponKind(b)] || b.face_value - a.face_value)
@@ -41,9 +39,6 @@ function WalletCard({ platform, coupons }) {
   const activeTotal = activeGov.reduce((s, c) => s + c.face_value, 0)
   const usable = active.some(c => canUseOn(c))
   const usableGov = activeGov.some(c => canUseOn(c))
-  // Claiming only happens Fri–Sun; on Mon–Thu the count means nothing, so it is hidden
-  const claimDay = isClaimDay()
-  const full = claimDay && claimed >= WEEKLY_CLAIMS
 
   // One tap at the till: mark used today, with an undo in the toast
   async function use(coupon) {
@@ -61,7 +56,6 @@ function WalletCard({ platform, coupons }) {
       <div className="wallet-head">
         <span className="wallet-dot" style={{ '--tint': info.tint }} aria-hidden="true" />
         <span className="account-name">{info[lang]}</span>
-        {full && <span className="badge">{tr.full}</span>}
         <span className="wallet-actions">
           {usableGov && (
             <button type="button" className="mini-btn go" onClick={() => navigate(`/calc?w=${platform}`)}>{tr.walletUse}</button>
@@ -71,12 +65,6 @@ function WalletCard({ platform, coupons }) {
         </span>
       </div>
       <div className="wallet-body">
-        {claimDay && (
-          <div className="claimed">
-            <span><strong>{claimed}</strong><em>/{WEEKLY_CLAIMS}</em> {tr.claimedShort}</span>
-            <Battery value={claimed} max={WEEKLY_CLAIMS} tone={full ? 'blue' : 'green'} />
-          </div>
-        )}
         <div className="wallet-total"><strong>{activeTotal}</strong><span>MOP</span></div>
         <div className="vchips" role="group" aria-label={tr.activeList}>
           {active.map(c => <VoucherChip key={c.id} coupon={c} onUse={use} />)}

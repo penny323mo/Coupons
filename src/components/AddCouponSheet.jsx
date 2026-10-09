@@ -6,8 +6,8 @@ import { useCoupons } from '../contexts/CouponsContext'
 import { FACE_VALUES, MERCHANT_DISCOUNT } from '../lib/campaigns'
 import { PLATFORMS, enabledPlatforms } from '../lib/platforms'
 import {
-  todayStr, parseDate, toDateStr, campaignOn, claimWindow, couponKind, formatDay, ruleUseBy,
-  CLAIM_DAYS, WEEKLY_CLAIMS,
+  todayStr, parseDate, toDateStr, campaignOn, formatDay, ruleUseBy,
+  CLAIM_DAYS,
 } from '../lib/dates'
 import { Sheet, Segmented } from './ui'
 
@@ -57,19 +57,9 @@ export default function AddCouponSheet({ preset }) {
   const kinds = campaign?.merchantVouchers ? ['gov', 'merchant_discount', 'merchant_gift'] : ['gov']
   const activeKind = kinds.includes(kind) ? kind : 'gov'
 
-  // Government vouchers already recorded for each wallet in this date's claim weekend
-  const { start, end } = claimWindow(date)
-  const claimedFor = p => coupons.filter(c => couponKind(c) === 'gov' && c.platform === p
-    && parseDate(c.drawn_date) >= start && parseDate(c.drawn_date) <= end).length
-  const claimed = claimedFor(platform)
-  const left = Math.max(WEEKLY_CLAIMS - claimed, 0)
-
   const warnings = []
   if (drawnDate && !campaign) warnings.push(tr.warnOutside)
   else if (drawnDate && !CLAIM_DAYS.includes(date.getDay())) warnings.push(tr.warnNotClaimDay)
-  if (activeKind === 'gov' && CLAIM_DAYS.includes(date.getDay()) && claimed + values.length > WEEKLY_CLAIMS) {
-    warnings.push(tr.warnCap(claimed))
-  }
 
   function pickWallet(p) {
     setPlatform(p)
@@ -127,13 +117,11 @@ export default function AddCouponSheet({ preset }) {
         <span>{tr.stepWallet}</span>
         <div className="wallet-pick" role="radiogroup" aria-label={tr.platform}>
           {wallets.map(p => {
-            const n = claimedFor(p)
             return (
               <button key={p} type="button" role="radio" aria-checked={p === platform}
                 className={p === platform ? 'on' : ''} onClick={() => pickWallet(p)}>
                 <span className="wallet-dot" style={{ '--tint': PLATFORMS[p].tint }} aria-hidden="true" />
                 <span className="wallet-pick-name">{lang === 'zh' ? PLATFORMS[p].short : PLATFORMS[p].en}</span>
-                {activeKind === 'gov' && <small>{n}/{WEEKLY_CLAIMS}</small>}
               </button>
             )
           })}
@@ -142,7 +130,7 @@ export default function AddCouponSheet({ preset }) {
 
       {activeKind === 'gov' ? (
         <div className="field">
-          <span>{tr.stepValues(left)}</span>
+          <span>{tr.stepValues}</span>
           <div className="chips values" role="group" aria-label={tr.faceValue}>
             {FACE_VALUES.map(v => (
               <button key={v} type="button" onClick={() => addValue(v)} disabled={values.length >= MAX_BATCH}>
