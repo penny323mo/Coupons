@@ -6,6 +6,7 @@ import { LangProvider } from './contexts/LangContext'
 import { CouponsProvider } from './contexts/CouponsContext'
 import { UIProvider } from './contexts/UIContext'
 import { startLens } from './lib/lens'
+import { watchForUpdates } from './lib/update'
 import { supabase } from './lib/supabase'
 import App from './App'
 import './styles.css'
@@ -37,3 +38,4 @@ readAuthCallback().finally(() => ReactDOM.createRoot(document.getElementById('ro
 ))
 
 startLens(`${import.meta.env.BASE_URL}backdrop.svg`)
+watchForUpdates()
