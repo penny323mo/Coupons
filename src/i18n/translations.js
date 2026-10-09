@@ -215,7 +215,7 @@ export const t = {
     hotline:          '查詢熱線',
     previousRound:    '上一輪',
     unconfirmed:      '承辦錢包名單同不適用場景以官方公佈為準。',
-    migrationNeeded:  '資料庫未升級，未可以記錄商戶券。請喺 Supabase 執行 supabase-migration-autumn.sql。',
+    migrationNeeded:  '資料庫未升級，未可以記錄商戶券。請喺 Supabase 執行 supabase-schema.sql。',
 
     errRequired:  '請填寫所有必填欄位',
     errPwdMatch:  '兩次密碼唔一樣',
@@ -428,7 +428,7 @@ export const t = {
     hotline:          'Hotline',
     previousRound:    'Previous round',
     unconfirmed:      'Check official notices for the wallet list and exclusions.',
-    migrationNeeded:  'Database not upgraded yet, so merchant vouchers cannot be saved. Run supabase-migration-autumn.sql in Supabase.',
+    migrationNeeded:  'Database not upgraded yet, so merchant vouchers cannot be saved. Run supabase-schema.sql in Supabase.',
 
     errRequired:  'Please fill in all required fields',
     errPwdMatch:  'Passwords do not match',
