@@ -98,8 +98,6 @@ export const t = {
     useWithDetails:'用咗，記低商戶同日期',
     editDetails:   '改商戶／日期',
     walletUse:     '用券',
-    google:        '用 Google 繼續',
-    orEmail:       '或者用電郵',
     authFailed:    m => `登入失敗：${m}`,
 
     // Rounds & archive
@@ -223,7 +221,6 @@ export const t = {
     errGeneric:   '出咗錯，請再試',
     errTimeout:   '伺服器冇回應，請檢查網絡再試一次。',
     errSave:      m => `儲存唔到：${m}`,
-    googleDisabled: 'Google 登入未喺 Supabase 開啟，暫時請用電郵登入。',
   },
 
   en: {
@@ -318,8 +315,6 @@ export const t = {
     useWithDetails:'Used, add store and date',
     editDetails:   'Edit store / date',
     walletUse:     'Use',
-    google:        'Continue with Google',
-    orEmail:       'or use email',
     authFailed:    m => `Sign-in failed: ${m}`,
 
     round:         n => `Round ${n}`,
@@ -436,6 +431,5 @@ export const t = {
     errGeneric:   'Something went wrong. Please try again.',
     errTimeout:   'The server did not respond. Check your connection and try again.',
     errSave:      m => `Could not save: ${m}`,
-    googleDisabled: 'Google sign-in is not enabled in Supabase yet. Please use email for now.',
   },
 }

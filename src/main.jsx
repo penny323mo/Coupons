@@ -10,7 +10,7 @@ import { supabase } from './lib/supabase'
 import App from './App'
 import './styles.css'
 
-// OAuth and email links return tokens in the URL hash, which HashRouter also uses.
+// Email confirmation links return tokens in the URL hash, which HashRouter also uses.
 // Let Supabase read them first, then hand the hash back to the router.
 async function readAuthCallback() {
   if (!/(access_token|error_description)=/.test(window.location.hash)) return
