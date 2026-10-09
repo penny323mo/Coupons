@@ -1016,3 +1016,47 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 .vchip.merchant_gift { background: linear-gradient(150deg, #a99bf5, #4f55f0 75%); }
 .vchip:active { transform: scale(.9); }
 @media (max-width: 380px) { .vchip { width: 46px; height: 46px; } }
+
+/* Compact wallet card: two rows so all wallets fit on one screen */
+.wallet { display: flex !important; flex-direction: column; gap: 8px; min-height: 0 !important; padding: 11px 12px 11px 14px !important; }
+.wallet-head { position: relative; z-index: 1; display: flex; align-items: center; gap: 8px; min-height: 30px; }
+.wallet-head .account-name { font-size: 13px; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.wallet-actions { margin-left: auto; display: flex; gap: 6px; flex-shrink: 0; }
+.mini-btn {
+  min-height: 32px;
+  min-width: 32px;
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--blue);
+  background: linear-gradient(140deg, #e3f0ffb0, #ffffff30 55%, #cfe4ff70);
+  border: 1px solid #ffffffc8;
+  box-shadow: 0 3px 8px #284b7320, inset 0 1px 1px #ffffff95;
+}
+.mini-btn.go { color: #17924a; background: linear-gradient(140deg, #e6fbeec0, #ffffff40 55%, #c9f1d790); }
+.mini-btn.plus { padding: 0; width: 32px; font-size: 18px; line-height: 1; }
+.mini-btn:active { transform: scale(.93); }
+.wallet-body { position: relative; z-index: 1; display: flex; align-items: center; gap: 12px; min-height: 40px; }
+.claimed { flex: 0 0 74px; font-size: 10px; color: var(--muted); }
+.claimed strong { font-size: 19px; font-weight: 500; color: var(--ink); letter-spacing: -.5px; }
+.claimed em { font-style: normal; font-size: 12px; }
+.claimed .battery { margin-top: 4px; height: 5px; }
+.wallet-total { flex: 0 0 auto; display: flex; align-items: baseline; gap: 3px; }
+.wallet-total strong { font-size: 21px; font-weight: 450; letter-spacing: -.6px; font-variant-numeric: tabular-nums; }
+.wallet-total span { font-size: 10px; color: var(--muted); }
+.wallet .vchips { margin-left: auto; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 5px; min-height: 0; }
+.wallet .vchip { width: 40px; height: 40px; border-radius: 12px; }
+.wallet .vchip strong { font-size: 15px; }
+.wallet .vchip small { font-size: 7.5px; }
+.wallet .vchip svg { width: 15px; height: 15px; }
+.cards { gap: 8px; }
+.wallet .vchips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; min-width: 0; padding: 2px 0; }
+.wallet .vchips::-webkit-scrollbar { display: none; }
+.wallet .vchip { flex: 0 0 36px; width: 36px; height: 36px; border-radius: 11px; }
+.wallet .vchip strong { font-size: 14px; }
+.wallet .vchip small { font-size: 7px; }
+.wallet .claimed { flex-basis: 62px; }
+.wallet .wallet-total strong { font-size: 19px; }
+.wallet-body { gap: 10px; min-height: 38px; }
+.wallet { gap: 6px; }

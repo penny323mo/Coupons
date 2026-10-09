@@ -56,30 +56,27 @@ function WalletCard({ platform, coupons }) {
 
   return (
     <article className={`card wallet${usable ? ' active' : ''}`}>
-      <div className="card-top">
+      <div className="wallet-head">
         <span className="wallet-dot" style={{ '--tint': info.tint }} aria-hidden="true" />
-        <span className="account-identity">
-          <span className="account-name">{info[lang]}</span>
-        </span>
+        <span className="account-name">{info[lang]}</span>
         {full && <span className="badge">{tr.full}</span>}
+        <span className="wallet-actions">
+          {usableGov && (
+            <button type="button" className="mini-btn go" onClick={() => navigate(`/calc?w=${platform}`)}>{tr.walletUse}</button>
+          )}
+          <button type="button" className="mini-btn plus" onClick={() => openAdd({ platform })}
+            aria-label={`${tr.walletRecord} · ${info[lang]}`}>＋</button>
+        </span>
       </div>
-      <div className="quota">
-        <div className="quota-head"><strong>{claimed}<em>/{WEEKLY_CLAIMS}</em></strong><span>{tr.claimedThisWeek}</span></div>
-        <Battery value={claimed} max={WEEKLY_CLAIMS} tone={full ? 'blue' : 'green'} />
-      </div>
-      <div className="quota">
-        <div className="quota-head"><strong>{activeTotal}</strong><span>{tr.activeValue}</span></div>
-      </div>
-      {active.length > 0 && (
+      <div className="wallet-body">
+        <div className="claimed">
+          <span><strong>{claimed}</strong><em>/{WEEKLY_CLAIMS}</em> {tr.claimedShort}</span>
+          <Battery value={claimed} max={WEEKLY_CLAIMS} tone={full ? 'blue' : 'green'} />
+        </div>
+        <div className="wallet-total"><strong>{activeTotal}</strong><span>MOP</span></div>
         <div className="vchips" role="group" aria-label={tr.activeList}>
           {active.map(c => <VoucherChip key={c.id} coupon={c} onUse={use} />)}
         </div>
-      )}
-      <div className="card-bottom">
-        {usableGov && (
-          <button type="button" className="card-use go" onClick={() => navigate(`/calc?w=${platform}`)}>{tr.walletUse}</button>
-        )}
-        <button type="button" className="card-use" onClick={() => openAdd({ platform })}>{tr.walletRecord}</button>
       </div>
     </article>
   )
