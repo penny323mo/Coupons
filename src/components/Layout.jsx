@@ -1,7 +1,9 @@
 import { Outlet } from 'react-router-dom'
 import { useLang } from '../contexts/LangContext'
 import { useUI } from '../contexts/UIContext'
-import { currentCampaign, campaignState, isClaimDay } from '../lib/dates'
+import { currentCampaign, campaignState, campaignWeek, roundNumber, isClaimDay } from '../lib/dates'
+import { useAuth } from '../contexts/AuthContext'
+import { enabledPlatforms } from '../lib/platforms'
 import Dock from './Dock'
 import AddCouponSheet from './AddCouponSheet'
 import { Toast } from './ui'
@@ -27,20 +29,29 @@ export function StatePill() {
 
 export default function Layout() {
   const { lang, tr } = useLang()
-  const { addFor } = useUI()
+  const { addFor, openAdd } = useUI()
+  const { profile } = useAuth()
   const campaign = currentCampaign()
+  const hasWallets = enabledPlatforms(profile).length > 0
+  const roundLine = [
+    tr.round(roundNumber(campaign)),
+    campaign.short[lang],
+    campaignState(campaign) === 'active' ? tr.weekOf(campaignWeek(campaign), campaign.weeks) : null,
+  ].filter(Boolean).join(' · ')
 
   return (
     <div className="shell">
       <header className="topbar">
         <a className="brand" href={`${BASE}#/`} aria-label={tr.appName}>
-          <span className="logo"><img src={`${BASE}icon.svg`} alt="" /></span>
+          <img className="app-icon" src={`${BASE}icon.svg`} alt="" />
           <span className="brand-text">
             <span className="brand-name">{tr.appName}</span>
-            <small>{campaign.name[lang]}</small>
+            <small>{roundLine}</small>
           </span>
         </a>
-        <StatePill />
+        <button type="button" className="capsule lens add-btn" onClick={() => openAdd()} disabled={!hasWallets}>
+          {tr.record}
+        </button>
       </header>
       <main className="page">
         <Outlet />

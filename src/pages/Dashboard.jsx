@@ -116,16 +116,6 @@ export default function Dashboard() {
 
   return (
     <>
-      <section className="hero hero-slim">
-        <div>
-          <p className="eyebrow">
-            {tr.round(roundNumber(campaign))} · {campaign.short[lang]}{state === 'active' ? ` · ${tr.weekOf(campaignWeek(campaign, today), campaign.weeks)}` : ''}
-          </p>
-        </div>
-        <div className="hero-actions">
-          <button type="button" className="capsule lens" onClick={() => openAdd()} disabled={!wallets.length}>{tr.record}</button>
-        </div>
-      </section>
 
       <InfoCard campaign={campaign} state={state} active={active} />
 

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useLang } from '../contexts/LangContext'
+import { StatePill } from './Layout'
 import { PLATFORMS } from '../lib/platforms'
 import { USE_MULTIPLE } from '../lib/campaigns'
 import {
@@ -54,7 +55,7 @@ export default function InfoCard({ campaign, state, active }) {
     <section className="infocard glass">
       <div className="info-main">
         <div className="info-figure">
-          <span className="info-label">{tr.infoLabel}</span>
+          <span className="info-label">{tr.infoLabel}<StatePill /></span>
           <div className="info-amount"><small>MOP</small><strong>{total}</strong></div>
           <span className="info-sub">{tr.infoSub(active.length, walletCount)}</span>
         </div>

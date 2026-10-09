@@ -39,9 +39,6 @@ export default function Coupons() {
           <h1>{tr.couponsTitle}</h1>
           <p className="summary">{tr.couponsSummary(unused, saved)}</p>
         </div>
-        <div className="hero-actions">
-          <button type="button" className="capsule lens" onClick={() => openAdd()}>{tr.record}</button>
-        </div>
       </section>
 
       <Segmented label={tr.couponsTitle} value={status} onChange={setStatus}
