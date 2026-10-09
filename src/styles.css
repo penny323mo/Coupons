@@ -972,3 +972,6 @@ h1.title-sm { font-size: 22px; }
 .wallet-pick-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 input[type=number] { -moz-appearance: textfield; appearance: textfield; }
+.toast.error { background: linear-gradient(135deg, #ffffffd8, #fdeceab0); white-space: normal; max-width: calc(100% - 32px); }
+.toast.error .tick { background: radial-gradient(circle at 35% 30%, #ff8a80, var(--red) 65%); box-shadow: 0 0 12px #e5342a80; }
+.toast.error .toast-text { white-space: normal; font-size: 13px; }

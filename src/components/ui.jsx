@@ -66,8 +66,9 @@ export function Toast() {
   const { toast, hideToast } = useUI()
   if (!toast) return null
   return (
-    <div key={toast.key} className={`toast show${toast.action ? ' with-action' : ''}`} role="status" aria-live="polite">
-      <span className="tick" aria-hidden="true">✓</span>
+    <div key={toast.key} className={`toast show${toast.action ? ' with-action' : ''}${toast.tone === 'error' ? ' error' : ''}`}
+      role={toast.tone === 'error' ? 'alert' : 'status'} aria-live="polite">
+      <span className="tick" aria-hidden="true">{toast.tone === 'error' ? '!' : '✓'}</span>
       <span className="toast-text">{toast.text}</span>
       {toast.action && (
         <button type="button" onClick={() => { hideToast(); toast.action.run() }}>{toast.action.label}</button>

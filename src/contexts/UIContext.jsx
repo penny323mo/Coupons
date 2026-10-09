@@ -10,10 +10,10 @@ export function UIProvider({ children }) {
 
   const hideToast = useCallback(() => { clearTimeout(timer.current); setToast(null) }, [])
 
-  const showToast = useCallback((text, action) => {
+  const showToast = useCallback((text, action, tone = 'ok') => {
     clearTimeout(timer.current)
-    setToast({ text, action, key: Date.now() })
-    timer.current = setTimeout(() => setToast(null), action ? 5000 : 2600)
+    setToast({ text, action, tone, key: Date.now() })
+    timer.current = setTimeout(() => setToast(null), action || tone === 'error' ? 5000 : 2600)
   }, [])
 
   return (

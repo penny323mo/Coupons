@@ -32,7 +32,10 @@ export default function Login() {
     setLoading(true)
     const { error: err } = await signInWithGoogle()
     // On success the browser leaves for Google; only failures come back here
-    if (err) { setError(tr.authFailed(err.message)); setLoading(false) }
+    if (err) {
+      setError(err.code === 'google_disabled' ? tr.googleDisabled : tr.authFailed(err.message))
+      setLoading(false)
+    }
   }
 
   async function handleSubmit(e) {

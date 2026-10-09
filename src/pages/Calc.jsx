@@ -34,7 +34,7 @@ export default function Calc() {
   async function redeem() {
     const ids = plan.used.map(c => c.id)
     const { error } = await updateCoupons(ids, { status: 'used', used_date: todayStr() })
-    if (error) { showToast(tr.errGeneric); return }
+    if (error) { showToast(tr.errSave(error.message), undefined, 'error'); return }
     setAmount('')
     showToast(tr.usedMany(ids.length, plan.voucherTotal), {
       label: tr.undo,

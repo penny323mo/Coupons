@@ -66,7 +66,7 @@ export default function CouponRow({ coupon }) {
   async function quickUse() {
     setSheet(null)
     const { error } = await updateCoupons(coupon.id, { status: 'used', used_date: todayStr() })
-    showToast(error ? tr.errGeneric : tr.usedOne(title), error ? undefined : undo)
+    showToast(error ? tr.errSave(error.message) : tr.usedOne(title), error ? undefined : undo, error ? 'error' : 'ok')
   }
 
   const saveDetails = () => run(() => updateCoupons(coupon.id, {

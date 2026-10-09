@@ -47,20 +47,40 @@ export function AuthProvider({ children }) {
     await fetchProfile(user.id)
   }
 
+  /**
+   * Upsert, so accounts created before the profile trigger existed get their row on first save.
+   * The change shows at once and is rolled back if the server refuses.
+   */
   async function updateProfile(updates) {
     if (!user) return { error: new Error('Not logged in') }
+    const before = profile
+    setProfile(prev => ({ ...(prev ?? { id: user.id }), ...updates }))
     const { data, error } = await supabase
       .from('profiles')
-      .update(updates)
-      .eq('id', user.id)
+      .upsert({ id: user.id, ...updates }, { onConflict: 'id' })
       .select()
       .single()
-    if (!error) setProfile(data)
+    if (error) {
+      console.error('profile save failed', error)
+      setProfile(before)
+    } else {
+      setProfile(data)
+    }
     return { data, error }
   }
 
   /** Google OAuth; returns to the app root, where main.jsx picks the session out of the URL. */
   async function signInWithGoogle() {
+    // Ask the server first so a disabled provider gives a message here, not a raw JSON page
+    try {
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/auth/v1/settings`, {
+        headers: { apikey: import.meta.env.VITE_SUPABASE_ANON_KEY },
+      })
+      const settings = await res.json()
+      if (settings?.external && !settings.external.google) {
+        return { error: { code: 'google_disabled', message: 'Google provider is not enabled' } }
+      }
+    } catch { /* fall through and let the redirect report any problem */ }
     return supabase.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo: `${window.location.origin}${import.meta.env.BASE_URL}` },

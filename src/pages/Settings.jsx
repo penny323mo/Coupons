@@ -37,7 +37,7 @@ export default function Settings() {
     setSaving(true)
     const { error } = await updateProfile({ enabled_platforms: next })
     setSaving(false)
-    showToast(error ? tr.errGeneric : tr.platformSaved)
+    showToast(error ? tr.errSave(error.message) : tr.platformSaved, undefined, error ? 'error' : 'ok')
   }
 
   function changeLang(l) {
