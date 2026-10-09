@@ -75,7 +75,8 @@ export default function Dashboard() {
   else summary = campaign.anyDayUse ? tr.summaryUse : tr.summaryUseOld
 
   const roundCoupons = couponsOfCampaign(coupons, campaign)
-  const archive = archivedCampaigns(today)
+  // Only show finished rounds that have records
+  const archive = archivedCampaigns(today).filter(c => couponsOfCampaign(coupons, c).length > 0)
   const active = roundCoupons
     .filter(c => effectiveStatus(c) === 'unused')
     .sort((a, b) => getExpiryDate(a.drawn_date) - getExpiryDate(b.drawn_date) || b.face_value - a.face_value)
