@@ -981,3 +981,11 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 .group-head { display: flex; align-items: center; gap: 9px; margin: 0 6px 8px; }
 .group-head strong { font-size: 14px; font-weight: 650; }
 .group-head .muted { margin-left: auto; font-size: 11px; font-variant-numeric: tabular-nums; }
+.wallet-group .list { gap: 7px; }
+.coupon.compact { padding: 7px 10px 7px 8px; border-radius: 20px; }
+.coupon.compact .coupon-body { min-height: 46px; gap: 11px; }
+.coupon.compact .tile { width: 46px; height: 46px; border-radius: 14px; }
+.coupon.compact .tile strong { font-size: 18px; }
+.coupon.compact .tile small { font-size: 8px; }
+.coupon.compact .coupon-info strong { font-size: 14px; font-weight: 600; }
+.coupon.compact .use-btn { min-height: 40px; padding: 6px 14px; }

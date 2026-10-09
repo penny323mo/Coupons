@@ -6,7 +6,7 @@ import { useCoupons } from '../contexts/CouponsContext'
 import { PLATFORMS, enabledPlatforms, platformLabel } from '../lib/platforms'
 import {
   currentCampaign, campaignState, campaignWeek, isClaimDay, isInClaimWindow, claimWindow,
-  effectiveStatus, couponKind, canUseOn, getExpiryDate, parseDate, formatDay, WEEKLY_CLAIMS,
+  effectiveStatus, couponKind, canUseOn, parseDate, formatDay, WEEKLY_CLAIMS,
   roundNumber, archivedCampaigns, couponsOfCampaign, roundStats,
 } from '../lib/dates'
 import CouponRow from '../components/CouponRow'
@@ -79,7 +79,7 @@ export default function Dashboard() {
   const archive = archivedCampaigns(today).filter(c => couponsOfCampaign(coupons, c).length > 0)
   const active = roundCoupons
     .filter(c => effectiveStatus(c) === 'unused')
-    .sort((a, b) => getExpiryDate(a) - getExpiryDate(b) || b.face_value - a.face_value)
+    .sort((a, b) => b.face_value - a.face_value)
   // Group by wallet, in the same order as the wallet cards, so each till payment reads as one block
   const walletOrder = [...wallets, ...active.map(c => c.platform).filter(p => !wallets.includes(p))]
   const groups = walletOrder

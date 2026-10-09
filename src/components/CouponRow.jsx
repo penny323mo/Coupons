@@ -3,8 +3,9 @@ import { useLang } from '../contexts/LangContext'
 import { useUI } from '../contexts/UIContext'
 import { useCoupons } from '../contexts/CouponsContext'
 import { platformLabel } from '../lib/platforms'
+import { USE_MULTIPLE } from '../lib/campaigns'
 import {
-  effectiveStatus, couponKind, canUseOn, daysLeft, lastUseDate, formatDay, formatDate, todayStr,
+  effectiveStatus, couponKind, canUseOn, daysLeft, lastUseDate, ruleUseBy, toDateStr, formatDay, formatDate, todayStr,
 } from '../lib/dates'
 import { Sheet } from './ui'
 
@@ -35,9 +36,10 @@ export default function CouponRow({ coupon, hideWallet = false }) {
   const left = daysLeft(coupon)
   const usableToday = canUseOn(coupon)
 
+  // In a wallet group the tile already shows the value, so show what it takes to use it
   const title = kind === 'gov'
-    ? `MOP ${coupon.face_value}`
-    : coupon.store_name || tr[kind]
+    ? (hideWallet ? tr.minSpend(coupon.face_value * USE_MULTIPLE) : `MOP ${coupon.face_value}`)
+    : coupon.store_name || (hideWallet && kind === 'merchant_discount' ? tr.merchantDeal : tr[kind])
   const sub = [
     hideWallet ? null : platformLabel(coupon.platform, lang),
     kind === 'gov' ? null : coupon.store_name ? tr[kind] : tr.anyMerchant,
@@ -45,9 +47,11 @@ export default function CouponRow({ coupon, hideWallet = false }) {
 
   let meta, metaTone = ''
   if (status === 'unused') {
-    meta = `${tr.lastDay(formatDay(lastUseDate(coupon), lang, true))} · ${tr.daysLeft(left)}`
-    if (left <= 1) metaTone = 'urgent'
-    if (!usableToday) { meta = `${tr.notYetUsable} · ${meta}`; metaTone = 'muted' }
+    // Every voucher clears on the same Thursday night, so only call out one with its own date
+    const ownDate = coupon.use_by && toDateStr(lastUseDate(coupon)) !== toDateStr(ruleUseBy(coupon.drawn_date))
+    meta = ownDate ? `${tr.lastDay(formatDay(lastUseDate(coupon), lang, true))} · ${tr.daysLeft(left)}` : ''
+    if (ownDate && left <= 1) metaTone = 'urgent'
+    if (!usableToday) { meta = [tr.notYetUsable, meta].filter(Boolean).join(' · '); metaTone = 'muted' }
   } else if (status === 'used') {
     meta = [coupon.used_date && tr.usedOn(formatDate(coupon.used_date, lang)), kind === 'gov' ? coupon.store_name : null]
       .filter(Boolean).join(' · ')
@@ -80,7 +84,7 @@ export default function CouponRow({ coupon, hideWallet = false }) {
 
   return (
     <>
-      <article className={`coupon card ${status}${usableToday ? ' usable' : ''}`}>
+      <article className={`coupon card ${status}${usableToday ? ' usable' : ''}${hideWallet ? ' compact' : ''}`}>
         <button type="button" className="coupon-body" onClick={() => setSheet('actions')}>
           <Tile coupon={coupon} kind={kind} status={status} />
           <span className="coupon-info">
