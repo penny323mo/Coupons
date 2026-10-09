@@ -7,12 +7,13 @@ export function UIProvider({ children }) {
   const [toast, setToast] = useState(null)
   const [addFor, setAddFor] = useState(null) // null = closed, {} = open, { platform } = preset
   const timer = useRef(null)
+  const seq = useRef(0) // new key per toast so its animation always restarts
 
   const hideToast = useCallback(() => { clearTimeout(timer.current); setToast(null) }, [])
 
   const showToast = useCallback((text, action, tone = 'ok') => {
     clearTimeout(timer.current)
-    setToast({ text, action, tone, key: Date.now() })
+    setToast({ text, action, tone, key: ++seq.current })
     timer.current = setTimeout(() => setToast(null), action || tone === 'error' ? 5000 : 2600)
   }, [])
 

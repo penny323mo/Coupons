@@ -17,7 +17,7 @@ export function planRedemption({ amount, coupons, merchantDiscount = false }) {
   const cap = Math.floor(net / USE_MULTIPLE)
 
   const pool = [...coupons]
-    .sort((a, b) => getExpiryDate(a.drawn_date) - getExpiryDate(b.drawn_date) || a.face_value - b.face_value)
+    .sort((a, b) => getExpiryDate(a) - getExpiryDate(b) || a.face_value - b.face_value)
     .slice(0, MAX_SEARCH)
 
   let best = { total: 0, mask: 0, count: 0, urgency: 0 }

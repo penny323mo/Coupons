@@ -59,7 +59,11 @@ export function CouponsProvider({ children }) {
       if (row.kind === 'gov') delete row.kind
       return row
     })
-    const { error } = await supabase.from('coupons').insert(rows)
+    let { error } = await supabase.from('coupons').insert(rows)
+    // Database without the use_by column yet: save without it rather than fail
+    if (error && NEEDS_MIGRATION.has(error.code) && /use_by/.test(error.message ?? '')) {
+      ({ error } = await supabase.from('coupons').insert(rows.map(({ use_by, ...r }) => r)))
+    }
     if (error) return { error, needsMigration: NEEDS_MIGRATION.has(error.code) }
     await refresh()
     return {}

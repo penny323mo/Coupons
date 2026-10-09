@@ -96,28 +96,44 @@ export function isInClaimWindow(coupon, date = new Date()) {
 
 /* ---------- Validity ---------- */
 
-/** Coupons are cleared at 00:00 on the Friday after the claim day. */
-export function getExpiryDate(drawnDateStr) {
+/** Official rule: cleared at 00:00 on the Friday after the claim day. */
+export function ruleExpiry(drawnDateStr) {
   const date = parseDate(drawnDateStr)
   const days = ((5 - date.getDay() + 7) % 7) || 7
   return addDays(date, days)
 }
 
-/** Last day the coupon can be used (the Thursday before expiry). */
-export function lastUseDate(drawnDateStr) {
-  return addDays(getExpiryDate(drawnDateStr), -1)
+/** Last usable day under the official rule (the Thursday before clearing). */
+export function ruleUseBy(drawnDateStr) {
+  return addDays(ruleExpiry(drawnDateStr), -1)
+}
+
+/**
+ * When a voucher stops being usable (00:00 of that day).
+ * A voucher may carry its own `use_by` from the wallet, which wins over the rule.
+ * Accepts a coupon row or a bare claim date.
+ */
+export function getExpiryDate(couponOrDate) {
+  if (typeof couponOrDate === 'string') return ruleExpiry(couponOrDate)
+  if (couponOrDate.use_by) return addDays(parseDate(couponOrDate.use_by), 1)
+  return ruleExpiry(couponOrDate.drawn_date)
+}
+
+/** Last day the voucher can be used. */
+export function lastUseDate(couponOrDate) {
+  return addDays(getExpiryDate(couponOrDate), -1)
 }
 
 /** Whole days left including today, 0 once cleared. */
-export function daysLeft(drawnDateStr, date = new Date()) {
-  const diff = Math.ceil((getExpiryDate(drawnDateStr) - startOfDay(date)) / 86400000)
+export function daysLeft(couponOrDate, date = new Date()) {
+  const diff = Math.ceil((getExpiryDate(couponOrDate) - startOfDay(date)) / 86400000)
   return Math.max(diff, 0)
 }
 
 export function isCouponExpired(coupon, date = new Date()) {
   if (coupon.status === 'used')    return false
   if (coupon.status === 'expired') return true
-  return startOfDay(date) >= getExpiryDate(coupon.drawn_date)
+  return startOfDay(date) >= getExpiryDate(coupon)
 }
 
 export function effectiveStatus(coupon, date = new Date()) {

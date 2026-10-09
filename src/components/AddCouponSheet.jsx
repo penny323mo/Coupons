@@ -6,7 +6,8 @@ import { useCoupons } from '../contexts/CouponsContext'
 import { FACE_VALUES, MERCHANT_DISCOUNT } from '../lib/campaigns'
 import { PLATFORMS, enabledPlatforms } from '../lib/platforms'
 import {
-  todayStr, parseDate, campaignOn, claimWindow, couponKind, formatDay, CLAIM_DAYS, WEEKLY_CLAIMS,
+  todayStr, parseDate, toDateStr, campaignOn, claimWindow, couponKind, formatDay, ruleUseBy,
+  CLAIM_DAYS, WEEKLY_CLAIMS,
 } from '../lib/dates'
 import { Sheet, Segmented } from './ui'
 
@@ -15,6 +16,20 @@ const MAX_BATCH = 6
 
 function readLastWallet() {
   try { return localStorage.getItem(LAST_WALLET) } catch { return null }
+}
+
+// The last weekday a wallet's vouchers were valid until, so the next batch defaults to it
+const useByKey = (platform, kind) => `useByDay:${platform}:${kind}`
+
+function defaultUseBy(drawnDate, platform, kind) {
+  const rule = ruleUseBy(drawnDate)
+  let day = null
+  try { day = localStorage.getItem(useByKey(platform, kind)) } catch { /* private mode */ }
+  if (day === null) return toDateStr(rule)
+  const drawn = parseDate(drawnDate)
+  const d = new Date(drawn)
+  d.setDate(d.getDate() + ((Number(day) - drawn.getDay() + 7) % 7))
+  return toDateStr(d)
 }
 
 export default function AddCouponSheet({ preset }) {
@@ -31,12 +46,14 @@ export default function AddCouponSheet({ preset }) {
   const [drawnDate, setDrawnDate] = useState(todayStr())
   const [editDate,  setEditDate]  = useState(false)
   const [merchant,  setMerchant]  = useState('')
+  const [useByEdit, setUseByEdit] = useState(null) // null = follow the default
   const [notes,     setNotes]     = useState('')
   const [error,     setError]     = useState('')
   const [saving,    setSaving]    = useState(false)
 
   const date = drawnDate ? parseDate(drawnDate) : new Date()
   const campaign = campaignOn(date)
+  const useBy = useByEdit ?? (drawnDate ? defaultUseBy(drawnDate, platform, kind) : '')
   const kinds = campaign?.merchantVouchers ? ['gov', 'merchant_discount', 'merchant_gift'] : ['gov']
   const activeKind = kinds.includes(kind) ? kind : 'gov'
 
@@ -56,6 +73,7 @@ export default function AddCouponSheet({ preset }) {
 
   function pickWallet(p) {
     setPlatform(p)
+    setUseByEdit(null)
     setError('')
   }
 
@@ -67,15 +85,15 @@ export default function AddCouponSheet({ preset }) {
   async function handleSave() {
     if (!platform || !drawnDate) { setError(tr.errRequired); return }
     if (activeKind === 'gov' && values.length === 0) { setError(tr.errPickValue); return }
-    if (activeKind !== 'gov' && !merchant.trim()) { setError(tr.errMerchant); return }
+    if (useBy && useBy < drawnDate) { setError(tr.errUseBy); return }
 
-    const base = { kind: activeKind, platform, drawn_date: drawnDate, notes: notes.trim() || null }
+    const base = { kind: activeKind, platform, drawn_date: drawnDate, use_by: useBy || null, notes: notes.trim() || null }
     const rows = activeKind === 'gov'
       ? values.map(v => ({ ...base, face_value: v, store_name: null }))
       : [{
           ...base,
           face_value: activeKind === 'merchant_discount' ? MERCHANT_DISCOUNT.off : 0,
-          store_name: merchant.trim(),
+          store_name: merchant.trim() || null,
         }]
 
     setSaving(true)
@@ -83,7 +101,10 @@ export default function AddCouponSheet({ preset }) {
     const { error: err, needsMigration } = await addCoupons(rows)
     setSaving(false)
     if (err) { setError(needsMigration ? tr.migrationNeeded : tr.errGeneric); return }
-    try { localStorage.setItem(LAST_WALLET, platform) } catch { /* private mode */ }
+    try {
+      localStorage.setItem(LAST_WALLET, platform)
+      if (useByEdit) localStorage.setItem(useByKey(platform, activeKind), String(parseDate(useByEdit).getDay()))
+    } catch { /* private mode */ }
     showToast(activeKind === 'gov'
       ? tr.savedBatch(rows.length, rows.reduce((s, r) => s + r.face_value, 0))
       : tr.saved)
@@ -161,11 +182,18 @@ export default function AddCouponSheet({ preset }) {
         <span>{tr.drawnDate}</span>
         {editDate
           ? <input type="date" value={drawnDate} max={todayStr()} autoFocus
-              onChange={e => setDrawnDate(e.target.value)} />
+              onChange={e => { setDrawnDate(e.target.value); setUseByEdit(null) }} />
           : <button type="button" className="link-btn" onClick={() => setEditDate(true)}>
               {drawnDate === todayStr() ? tr.today : ''}{formatDay(date, lang, true)} · {tr.change}
             </button>}
       </div>
+
+      <div className="date-row">
+        <span>{tr.useBy}</span>
+        <input type="date" value={useBy} min={drawnDate} aria-label={tr.useBy}
+          onChange={e => setUseByEdit(e.target.value)} />
+      </div>
+      <p className="field-hint">{tr.useByHint}</p>
 
       {warnings.map(w => <p key={w} className="note warn">{w}</p>)}
       {error && <p className="note error" role="alert">{error}</p>}

@@ -32,17 +32,20 @@ export default function CouponRow({ coupon }) {
 
   const status = effectiveStatus(coupon)
   const kind = couponKind(coupon)
-  const left = daysLeft(coupon.drawn_date)
+  const left = daysLeft(coupon)
   const usableToday = canUseOn(coupon)
 
   const title = kind === 'gov'
     ? `MOP ${coupon.face_value}`
     : coupon.store_name || tr[kind]
-  const sub = [platformLabel(coupon.platform, lang), kind === 'gov' ? null : tr[kind]].filter(Boolean).join(' · ')
+  const sub = [
+    platformLabel(coupon.platform, lang),
+    kind === 'gov' ? null : coupon.store_name ? tr[kind] : tr.anyMerchant,
+  ].filter(Boolean).join(' · ')
 
   let meta, metaTone = ''
   if (status === 'unused') {
-    meta = `${tr.lastDay(formatDay(lastUseDate(coupon.drawn_date), lang, true))} · ${tr.daysLeft(left)}`
+    meta = `${tr.lastDay(formatDay(lastUseDate(coupon), lang, true))} · ${tr.daysLeft(left)}`
     if (left <= 1) metaTone = 'urgent'
     if (!usableToday) { meta = `${tr.notYetUsable} · ${meta}`; metaTone = 'muted' }
   } else if (status === 'used') {

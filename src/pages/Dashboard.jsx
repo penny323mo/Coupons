@@ -79,7 +79,7 @@ export default function Dashboard() {
   const archive = archivedCampaigns(today).filter(c => couponsOfCampaign(coupons, c).length > 0)
   const active = roundCoupons
     .filter(c => effectiveStatus(c) === 'unused')
-    .sort((a, b) => getExpiryDate(a.drawn_date) - getExpiryDate(b.drawn_date) || b.face_value - a.face_value)
+    .sort((a, b) => getExpiryDate(a) - getExpiryDate(b) || b.face_value - a.face_value)
   const usableValue = active.filter(c => couponKind(c) === 'gov' && canUseOn(c)).reduce((s, c) => s + c.face_value, 0)
 
   return (

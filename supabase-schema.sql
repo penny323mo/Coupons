@@ -23,13 +23,16 @@ create table if not exists public.coupons (
   drawn_date  date not null,
   status      text not null default 'unused',
   used_date   date,
+  use_by      date,
   store_name  text,
   notes       text,
   created_at  timestamptz not null default now()
 );
 
--- Older installs may lack the kind column
+-- Older installs may lack these columns
 alter table public.coupons add column if not exists kind text not null default 'gov';
+-- Last usable day as shown in the wallet (overrides the Friday-clearing rule)
+alter table public.coupons add column if not exists use_by date;
 
 alter table public.coupons drop constraint if exists coupons_kind_check;
 alter table public.coupons add constraint coupons_kind_check
