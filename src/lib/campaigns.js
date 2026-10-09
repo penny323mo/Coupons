@@ -1,18 +1,9 @@
 /**
  * Rounds of the Macau community consumption scheme (DSEDT + Macao Chamber of Commerce).
- * Sources: gov.mo news 1272306 (autumn launch), 1227166 (spring launch).
+ * Source: gov.mo news 1272306 (2026社區消費連環賞 launch).
+ * Add later rounds to the end; finished rounds with records move to the archive.
  */
 export const CAMPAIGNS = [
-  {
-    id: '2026-spring',
-    name: { zh: '2026社區消費大獎賞', en: '2026 Community Consumption Rewards' },
-    short: { zh: '大獎賞', en: 'Spring round' },
-    start: '2026-04-10',
-    end: '2026-06-18',
-    weeks: 10,
-    anyDayUse: false,         // redeem Mon–Thu only
-    merchantVouchers: false,
-  },
   {
     id: '2026-autumn',
     name: { zh: '2026社區消費連環賞', en: '2026 Community Spending Rewards' },
