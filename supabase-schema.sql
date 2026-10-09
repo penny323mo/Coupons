@@ -17,13 +17,19 @@ create table if not exists public.coupons (
   id          uuid default gen_random_uuid() primary key,
   user_id     uuid references auth.users on delete cascade not null,
   platform    text not null,
-  face_value  integer not null check (face_value in (10, 20, 50, 100, 200)),
+  kind        text not null default 'gov'
+              constraint coupons_kind_check check (kind in ('gov', 'merchant_discount', 'merchant_gift')),
+  face_value  integer not null,
   drawn_date  date not null,
   status      text not null default 'unused' check (status in ('unused', 'used', 'expired')),
   used_date   date,
   store_name  text,
   notes       text,
-  created_at  timestamptz default now()
+  created_at  timestamptz default now(),
+  constraint coupons_face_value_check check (
+    (kind = 'gov' and face_value in (10, 20, 50, 100, 200))
+    or (kind <> 'gov' and face_value >= 0)
+  )
 );
 
 -- 3. Enable Row Level Security

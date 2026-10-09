@@ -1,231 +1,139 @@
-import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { useLang } from '../contexts/LangContext'
+import { useUI } from '../contexts/UIContext'
+import { useCoupons } from '../contexts/CouponsContext'
+import { PLATFORMS, enabledPlatforms } from '../lib/platforms'
 import {
-  isDrawDay, isUseDay, isProgramActive, isProgramBefore, isProgramAfter,
-  isCouponActive, effectiveStatus, getCurrentDrawWeekStart, formatExpiry,
+  currentCampaign, campaignState, campaignWeek, isClaimDay, isInClaimWindow, claimWindow,
+  effectiveStatus, couponKind, canUseOn, getExpiryDate, parseDate, formatDay, WEEKLY_CLAIMS,
 } from '../lib/dates'
-import { PLATFORMS, normalizePlatform, platformLabel } from '../i18n/translations'
-import AddCouponModal from '../components/AddCouponModal'
-import UseModal       from '../components/UseModal'
+import CouponRow from '../components/CouponRow'
+import { Battery, Spinner } from '../components/ui'
 
-function StatusBanner({ tr }) {
-  const today = new Date()
-  if (isProgramBefore(today)) {
-    return (
-      <div className="bg-gray-100 rounded-2xl p-3 text-center text-sm text-gray-500">
-        {tr.beforeStart}
+function WalletCard({ platform, coupons }) {
+  const { lang, tr } = useLang()
+  const { openAdd } = useUI()
+  const info = PLATFORMS[platform]
+  const claimed = coupons.filter(c => couponKind(c) === 'gov' && isInClaimWindow(c)).length
+  const active = coupons.filter(c => effectiveStatus(c) === 'unused')
+  const activeGov = active.filter(c => couponKind(c) === 'gov')
+  const activeTotal = activeGov.reduce((s, c) => s + c.face_value, 0)
+  const usable = active.some(c => canUseOn(c))
+  const full = claimed >= WEEKLY_CLAIMS
+
+  return (
+    <article className={`card wallet${usable ? ' active' : ''}`}>
+      <div className="card-top">
+        <span className="wallet-dot" style={{ '--tint': info.tint }} aria-hidden="true" />
+        <span className="account-identity">
+          <span className="account-name">{info[lang]}</span>
+        </span>
+        {full && <span className="badge">{tr.full}</span>}
       </div>
-    )
-  }
-  if (isProgramAfter(today)) {
-    return (
-      <div className="bg-gray-100 rounded-2xl p-3 text-center text-sm text-gray-500">
-        {tr.afterEnd}
+      <div className="quota">
+        <div className="quota-head"><strong>{claimed}<em>/{WEEKLY_CLAIMS}</em></strong><span>{tr.claimedThisWeek}</span></div>
+        <Battery value={claimed} max={WEEKLY_CLAIMS} tone={full ? 'blue' : 'green'} />
       </div>
-    )
-  }
-  if (isDrawDay(today)) {
-    return (
-      <div className="bg-gradient-to-r from-amber-400 to-orange-400 rounded-2xl p-3 text-center">
-        <div className="text-white font-bold text-base">{tr.todayDraw}</div>
-        <div className="text-white/80 text-xs mt-0.5">{tr.useDays}</div>
+      <div className="quota">
+        <div className="quota-head"><strong>{activeTotal}</strong><span>{tr.activeValue}</span></div>
+        <small className="quota-note">{tr.count(activeGov.length)}</small>
       </div>
-    )
-  }
-  if (isUseDay(today)) {
-    return (
-      <div className="bg-gradient-to-r from-green-400 to-emerald-500 rounded-2xl p-3 text-center">
-        <div className="text-white font-bold text-base">{tr.todayUse}</div>
-        <div className="text-white/80 text-xs mt-0.5">{tr.drawDays}</div>
+      <div className="card-bottom">
+        <button type="button" className="card-use" onClick={() => openAdd({ platform })}>{tr.walletRecord}</button>
       </div>
-    )
-  }
-  return null
+    </article>
+  )
 }
 
 export default function Dashboard() {
-  const { user, profile } = useAuth()
-  const { lang, tr }      = useLang()
+  const { profile } = useAuth()
+  const { lang, tr } = useLang()
+  const { openAdd } = useUI()
+  const { coupons, loading } = useCoupons()
 
-  const [coupons,      setCoupons]      = useState([])
-  const [loading,      setLoading]      = useState(true)
-  const [showAdd,      setShowAdd]      = useState(false)
-  const [useTarget,    setUseTarget]    = useState(null)
+  const today = new Date()
+  const campaign = currentCampaign(today)
+  const state = campaignState(campaign, today)
+  const claimDay = isClaimDay(today)
+  const wallets = enabledPlatforms(profile)
 
-  const fetchCoupons = useCallback(async () => {
-    const { data } = await supabase
-      .from('coupons')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('drawn_date', { ascending: false })
-    const rows = data ?? []
+  // Days left until the Friday 00:00 clear, counting today
+  const untilClear = ((5 - today.getDay() + 7) % 7) || 7
+  const nextClaim = claimWindow(today).start
 
-    // Auto-fix legacy platform keys in DB (fire-and-forget)
-    rows.forEach(c => {
-      const canonical = normalizePlatform(c.platform)
-      if (canonical !== c.platform) {
-        supabase.from('coupons')
-          .update({ platform: canonical })
-          .eq('id', c.id)
-          .then(() => {})
-        c.platform = canonical // fix in-memory too
-      }
-    })
+  let summary
+  if (state === 'before') summary = tr.summaryBefore(formatDay(parseDate(campaign.start), lang, true))
+  else if (state === 'after') summary = tr.summaryAfter(formatDay(parseDate(campaign.end), lang, true))
+  else if (claimDay) summary = tr.summaryClaim
+  else summary = campaign.anyDayUse ? tr.summaryUse : tr.summaryUseOld
 
-    setCoupons(rows)
-    setLoading(false)
-  }, [user.id])
-
-  useEffect(() => { fetchCoupons() }, [fetchCoupons])
-
-  // Auto-mark expired coupons (fire-and-forget)
-  useEffect(() => {
-    if (!coupons.length) return
-    const toExpire = coupons.filter(c => effectiveStatus(c) === 'expired' && c.status === 'unused')
-    if (!toExpire.length) return
-    const ids = toExpire.map(c => c.id)
-    supabase.from('coupons').update({ status: 'expired' }).in('id', ids).then(() => {})
-  }, [coupons])
-
-  // Stats
-  const weekStart   = getCurrentDrawWeekStart()
-  const weekCoupons = coupons.filter(c => {
-    const d = new Date(c.drawn_date + 'T00:00:00')
-    return d >= weekStart
-  })
-  const weekDraws = weekCoupons.length
-
-  const activeCoupons = coupons.filter(c => isCouponActive(c))
-  const totalSaved    = coupons
-    .filter(c => c.status === 'used')
-    .reduce((sum, c) => sum + c.face_value, 0)
-
-  const displayName = profile?.display_name?.split('@')[0] || ''
+  const active = coupons
+    .filter(c => effectiveStatus(c) === 'unused')
+    .sort((a, b) => getExpiryDate(a.drawn_date) - getExpiryDate(b.drawn_date) || b.face_value - a.face_value)
+  const usableValue = active.filter(c => couponKind(c) === 'gov' && canUseOn(c)).reduce((s, c) => s + c.face_value, 0)
 
   return (
-    <div className="min-h-screen bg-primary-50">
-      {/* Header */}
-      <div className="bg-gradient-to-b from-primary-600 to-primary-700 px-4 pt-12 pb-6 safe-top">
-        <div className="flex items-center justify-between mb-1">
-          <div>
-            <p className="text-white/70 text-sm">
-              {displayName ? `👋 ${displayName}` : tr.appSubtitle}
-            </p>
-            <h1 className="text-white font-bold text-xl">{tr.appName}</h1>
-          </div>
-          <div className="text-3xl">🎰</div>
-        </div>
-      </div>
-
-      <div className="px-4 -mt-2 space-y-4 pb-6">
-        {/* Status banner */}
-        <StatusBanner tr={tr} />
-
-        {/* Stats row */}
-        <div className="grid grid-cols-3 gap-3">
-          <div className="card text-center">
-            <div className="text-2xl font-bold text-primary-600">{weekDraws}</div>
-            <div className="text-[10px] text-gray-400 leading-tight mt-0.5">{tr.thisWeekDraws}</div>
-            <div className="text-[10px] text-gray-300 mt-0.5">{tr.maxDraws}</div>
-          </div>
-          <div className="card text-center">
-            <div className="text-2xl font-bold text-blue-500">{activeCoupons.length}</div>
-            <div className="text-[10px] text-gray-400 leading-tight mt-0.5">{tr.activeCoupons}</div>
-          </div>
-          <div className="card text-center">
-            <div className="text-2xl font-bold text-green-500">{totalSaved}</div>
-            <div className="text-[10px] text-gray-400 leading-tight mt-0.5">{tr.totalSaved}</div>
-            <div className="text-[10px] text-gray-300">MOP</div>
-          </div>
-        </div>
-
-        {/* Draw progress bar */}
-        {isProgramActive() && (
-          <div className="card">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-sm font-semibold text-gray-700">{tr.thisWeekDraws}</span>
-              <span className="text-sm text-primary-600 font-bold">{weekDraws} / 3</span>
-            </div>
-            <div className="bg-gray-100 rounded-full h-2.5">
-              <div
-                className="bg-primary-500 h-2.5 rounded-full transition-all"
-                style={{ width: `${Math.min((weekDraws / 3) * 100, 100)}%` }}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Active coupons */}
+    <>
+      <section className="hero">
         <div>
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2 px-1">
-            {tr.activeCoupons}
-          </h2>
+          <p className="eyebrow">
+            {campaign.short[lang]}{state === 'active' ? ` · ${tr.weekOf(campaignWeek(campaign, today), campaign.weeks)}` : ''}
+          </p>
+          <h1>{tr.overview}</h1>
+          <p className="summary">{summary}</p>
+        </div>
+        <div className="hero-actions">
+          <button type="button" className="capsule lens" onClick={() => openAdd()} disabled={!wallets.length}>{tr.record}</button>
+        </div>
+      </section>
 
-          {loading ? (
-            <div className="flex justify-center py-8">
-              <div className="w-6 h-6 border-3 border-primary-300 border-t-primary-600 rounded-full animate-spin" />
-            </div>
-          ) : activeCoupons.length === 0 ? (
-            <div className="card text-center py-10">
-              <div className="text-4xl mb-2">🎫</div>
-              <p className="text-gray-400 text-sm">{tr.noCoupons}</p>
-              <p className="text-gray-300 text-xs mt-1">{tr.addFirstCoupon}</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {activeCoupons.map(coupon => {
-                const pLabel = platformLabel(coupon.platform, lang)
-                return (
-                  <div key={coupon.id} className="card flex items-center gap-3">
-                    <div className="bg-primary-600 text-white font-bold text-xl rounded-xl w-14 h-14 flex items-center justify-center shrink-0">
-                      {coupon.face_value}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-gray-800">MOP {coupon.face_value}</div>
-                      <div className="text-sm text-gray-500">{pLabel}</div>
-                      <div className="text-xs text-orange-500 mt-0.5">
-                        {tr.expiresOn} {formatExpiry(coupon.drawn_date, lang)}
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => setUseTarget(coupon)}
-                      className="text-xs bg-green-500 text-white px-3 py-2 rounded-xl font-medium shrink-0"
-                    >
-                      {tr.markAsUsed}
-                    </button>
-                  </div>
-                )
-              })}
+      {state === 'active' && (
+        <section className="today glass">
+          <div>
+            <strong>{claimDay ? tr.todayClaim : tr.todayUse}</strong>
+            <p>{claimDay ? tr.clearHint : tr.claimNext(formatDay(nextClaim, lang, true))}</p>
+          </div>
+          <div className="today-figure">
+            <strong>MOP {usableValue}</strong>
+            <span>{tr.daysLeft(untilClear)}</span>
+          </div>
+        </section>
+      )}
+
+      <section>
+        <div className="section-heading">
+          <h2>{tr.wallets}</h2>
+          <span className="muted">{tr.walletsHint}</span>
+        </div>
+        {wallets.length === 0
+          ? <article className="card notice">{tr.noWallets}</article>
+          : (
+            <div className="cards">
+              {wallets.map(p => (
+                <WalletCard key={p} platform={p} coupons={coupons.filter(c => c.platform === p)} />
+              ))}
             </div>
           )}
+      </section>
+
+      <section>
+        <div className="section-heading">
+          <h2>{tr.activeList}</h2>
+          <span className="muted">{tr.activeListHint}</span>
         </div>
-      </div>
-
-      {/* FAB */}
-      <button
-        onClick={() => setShowAdd(true)}
-        className="fixed bottom-24 right-4 w-14 h-14 bg-primary-600 text-white rounded-full shadow-lg text-3xl flex items-center justify-center active:scale-95 transition-transform z-30"
-        aria-label={tr.addCoupon}
-      >
-        +
-      </button>
-
-      {showAdd && (
-        <AddCouponModal
-          onClose={() => setShowAdd(false)}
-          onAdded={() => { setShowAdd(false); fetchCoupons() }}
-        />
-      )}
-
-      {useTarget && (
-        <UseModal
-          coupon={useTarget}
-          onClose={() => setUseTarget(null)}
-          onUpdated={() => { setUseTarget(null); fetchCoupons() }}
-        />
-      )}
-    </div>
+        {loading ? (
+          <div className="card empty"><Spinner /></div>
+        ) : active.length === 0 ? (
+          <div className="card empty">
+            <strong>{tr.noActive}</strong>
+            <p>{tr.noActiveHint}</p>
+          </div>
+        ) : (
+          <div className="list">
+            {active.map(c => <CouponRow key={c.id} coupon={c} />)}
+          </div>
+        )}
+      </section>
+    </>
   )
 }

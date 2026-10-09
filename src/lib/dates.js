@@ -1,119 +1,170 @@
-import { PROGRAM_START, PROGRAM_END } from '../i18n/translations'
+import { CAMPAIGNS } from './campaigns'
 
 // Day of week constants
-export const DRAW_DAYS = [5, 6, 0]  // Fri, Sat, Sun
-export const USE_DAYS  = [1, 2, 3, 4] // Mon, Tue, Wed, Thu
+export const CLAIM_DAYS = [5, 6, 0]     // Fri, Sat, Sun
+export const WEEKLY_CLAIMS = 3          // per wallet account, reset Monday 00:00
 
-/** Is today a draw day? (Fri/Sat/Sun) */
-export function isDrawDay(date = new Date()) {
-  return DRAW_DAYS.includes(date.getDay())
+/** Parse 'YYYY-MM-DD' as a local date (never UTC). */
+export function parseDate(str) {
+  const [y, m, d] = str.split('-').map(Number)
+  return new Date(y, m - 1, d)
 }
 
-/** Is today a use/redemption day? (Mon–Thu) */
-export function isUseDay(date = new Date()) {
-  return USE_DAYS.includes(date.getDay())
+/** Local date → 'YYYY-MM-DD'. */
+export function toDateStr(date) {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
 }
 
-/** Is today within the program period? */
-export function isProgramActive(date = new Date()) {
+export function todayStr() {
+  return toDateStr(new Date())
+}
+
+function startOfDay(date = new Date()) {
   const d = new Date(date)
   d.setHours(0, 0, 0, 0)
-  return d >= PROGRAM_START && d <= PROGRAM_END
-}
-
-export function isProgramBefore(date = new Date()) {
-  const d = new Date(date)
-  d.setHours(0, 0, 0, 0)
-  return d < PROGRAM_START
-}
-
-export function isProgramAfter(date = new Date()) {
-  const d = new Date(date)
-  d.setHours(0, 0, 0, 0)
-  return d > PROGRAM_END
-}
-
-/**
- * Calculate coupon expiry date.
- * Coupons expire every Friday at midnight.
- * - Drawn on Fri → expires next Fri (+7 days)
- * - Drawn on Sat → expires next Fri (+6 days)
- * - Drawn on Sun → expires next Fri (+5 days)
- */
-export function getExpiryDate(drawnDateStr) {
-  const date = new Date(drawnDateStr + 'T00:00:00')
-  const day  = date.getDay()
-  let daysToNextFriday
-  if (day === 5)      daysToNextFriday = 7 // Fri
-  else if (day === 6) daysToNextFriday = 6 // Sat
-  else                daysToNextFriday = 5 // Sun
-  const expiry = new Date(date)
-  expiry.setDate(date.getDate() + daysToNextFriday)
-  return expiry
-}
-
-/** Is a coupon (still) active: unused and not expired? */
-export function isCouponActive(coupon) {
-  if (coupon.status === 'used')    return false
-  if (coupon.status === 'expired') return false
-  const expiry = getExpiryDate(coupon.drawn_date)
-  const today  = new Date()
-  today.setHours(0, 0, 0, 0)
-  return today < expiry
-}
-
-/** Is a coupon expired (unused but past expiry)? */
-export function isCouponExpired(coupon) {
-  if (coupon.status !== 'unused') return false
-  const expiry = getExpiryDate(coupon.drawn_date)
-  const today  = new Date()
-  today.setHours(0, 0, 0, 0)
-  return today >= expiry
-}
-
-/** Compute the effective status, accounting for expiry */
-export function effectiveStatus(coupon) {
-  if (coupon.status === 'used') return 'used'
-  if (isCouponExpired(coupon))  return 'expired'
-  return 'unused'
-}
-
-/**
- * Get the start of the current draw week (most recent Friday).
- * Mon–Thu → previous Friday
- * Fri–Sun → this Friday
- */
-export function getCurrentDrawWeekStart(date = new Date()) {
-  const d   = new Date(date)
-  d.setHours(0, 0, 0, 0)
-  const day = d.getDay()
-  // Days since last Friday: Fri=0, Sat=1, Sun=2, Mon=3, Tue=4, Wed=5, Thu=6
-  const daysSinceFriday = ((day - 5) + 7) % 7
-  d.setDate(d.getDate() - daysSinceFriday)
   return d
 }
 
-/** Format a date string (YYYY-MM-DD) to locale display */
-export function formatDate(dateStr, lang = 'zh') {
+function addDays(date, n) {
+  const d = new Date(date)
+  d.setDate(d.getDate() + n)
+  return d
+}
+
+/* ---------- Campaigns ---------- */
+
+/** Campaign whose period contains the given day, or null. */
+export function campaignOn(date = new Date()) {
+  const d = startOfDay(date)
+  return CAMPAIGNS.find(c => d >= parseDate(c.start) && d <= parseDate(c.end)) ?? null
+}
+
+/** The campaign that matters now: the running one, else the next, else the last. */
+export function currentCampaign(date = new Date()) {
+  const d = startOfDay(date)
+  return campaignOn(d)
+    ?? CAMPAIGNS.find(c => parseDate(c.start) > d)
+    ?? CAMPAIGNS[CAMPAIGNS.length - 1]
+}
+
+/** 'before' | 'active' | 'after' for the given campaign. */
+export function campaignState(campaign, date = new Date()) {
+  const d = startOfDay(date)
+  if (d < parseDate(campaign.start)) return 'before'
+  if (d > parseDate(campaign.end))   return 'after'
+  return 'active'
+}
+
+/** 1-based week number inside the campaign (weeks start on the campaign's first Friday). */
+export function campaignWeek(campaign, date = new Date()) {
+  const days = Math.floor((startOfDay(date) - parseDate(campaign.start)) / 86400000)
+  return Math.min(Math.max(Math.floor(days / 7) + 1, 1), campaign.weeks)
+}
+
+/** Campaign a coupon belongs to (by the day it was claimed). */
+export function campaignOfCoupon(coupon) {
+  return campaignOn(parseDate(coupon.drawn_date)) ?? currentCampaign(parseDate(coupon.drawn_date))
+}
+
+/* ---------- Claim window ---------- */
+
+export function isClaimDay(date = new Date()) {
+  return CLAIM_DAYS.includes(date.getDay()) && campaignOn(date) !== null
+}
+
+/**
+ * The Fri–Sun claim window that the weekly cap applies to.
+ * Fri–Sun → this weekend. Mon–Thu → the coming weekend (the cap was reset on Monday).
+ */
+export function claimWindow(date = new Date()) {
+  const d = startOfDay(date)
+  const day = d.getDay()
+  const friday = CLAIM_DAYS.includes(day)
+    ? addDays(d, -((day - 5 + 7) % 7))
+    : addDays(d, 5 - day)
+  return { start: friday, end: addDays(friday, 2) }
+}
+
+export function isInClaimWindow(coupon, date = new Date()) {
+  const { start, end } = claimWindow(date)
+  const drawn = parseDate(coupon.drawn_date)
+  return drawn >= start && drawn <= end
+}
+
+/* ---------- Validity ---------- */
+
+/** Coupons are cleared at 00:00 on the Friday after the claim day. */
+export function getExpiryDate(drawnDateStr) {
+  const date = parseDate(drawnDateStr)
+  const days = ((5 - date.getDay() + 7) % 7) || 7
+  return addDays(date, days)
+}
+
+/** Last day the coupon can be used (the Thursday before expiry). */
+export function lastUseDate(drawnDateStr) {
+  return addDays(getExpiryDate(drawnDateStr), -1)
+}
+
+/** Whole days left including today, 0 once cleared. */
+export function daysLeft(drawnDateStr, date = new Date()) {
+  const diff = Math.ceil((getExpiryDate(drawnDateStr) - startOfDay(date)) / 86400000)
+  return Math.max(diff, 0)
+}
+
+export function isCouponExpired(coupon, date = new Date()) {
+  if (coupon.status === 'used')    return false
+  if (coupon.status === 'expired') return true
+  return startOfDay(date) >= getExpiryDate(coupon.drawn_date)
+}
+
+export function effectiveStatus(coupon, date = new Date()) {
+  if (coupon.status === 'used') return 'used'
+  if (isCouponExpired(coupon, date)) return 'expired'
+  return 'unused'
+}
+
+export function isCouponActive(coupon, date = new Date()) {
+  return effectiveStatus(coupon, date) === 'unused'
+}
+
+/**
+ * Can this coupon be redeemed on the given day?
+ * Spring round: Mon–Thu only. Autumn round: any day from the claim day.
+ */
+export function canUseOn(coupon, date = new Date()) {
+  if (!isCouponActive(coupon, date)) return false
+  const d = startOfDay(date)
+  if (d < parseDate(coupon.drawn_date)) return false
+  if (campaignOfCoupon(coupon).anyDayUse) return true
+  return d.getDay() >= 1 && d.getDay() <= 4
+}
+
+/* ---------- Coupon kinds ---------- */
+
+export const KINDS = ['gov', 'merchant_discount', 'merchant_gift']
+
+export function couponKind(coupon) {
+  return KINDS.includes(coupon.kind) ? coupon.kind : 'gov'
+}
+
+/* ---------- Formatting ---------- */
+
+const WEEKDAYS = {
+  zh: ['日', '一', '二', '三', '四', '五', '六'],
+  en: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+}
+
+export function formatDay(date, lang = 'zh', withWeekday = false) {
+  const wd = WEEKDAYS[lang][date.getDay()]
+  if (lang === 'zh') return `${date.getMonth() + 1}月${date.getDate()}日${withWeekday ? `（${wd}）` : ''}`
+  const s = date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+  return withWeekday ? `${wd} ${s}` : s
+}
+
+export function formatDate(dateStr, lang = 'zh', withWeekday = false) {
   if (!dateStr) return ''
-  const d = new Date(dateStr + 'T00:00:00')
-  if (lang === 'zh') {
-    return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`
-  }
-  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
-}
-
-/** Format expiry date from a drawn_date string */
-export function formatExpiry(drawnDateStr, lang = 'zh') {
-  const expiry = getExpiryDate(drawnDateStr)
-  const month  = expiry.getMonth() + 1
-  const day    = expiry.getDate()
-  if (lang === 'zh') return `${month}月${day}日`
-  return expiry.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
-}
-
-/** Today as YYYY-MM-DD */
-export function todayStr() {
-  const d = new Date()
-  return d.toISOString().split('T')[0]
+  return formatDay(parseDate(dateStr), lang, withWeekday)
 }

@@ -1,164 +1,118 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useLang } from '../contexts/LangContext'
-import { PLATFORMS, normalizePlatform } from '../i18n/translations'
+import { useUI } from '../contexts/UIContext'
+import { CAMPAIGNS, FACE_VALUES } from '../lib/campaigns'
+import { PLATFORMS, PLATFORM_KEYS, enabledPlatforms } from '../lib/platforms'
+import { currentCampaign, parseDate, formatDay } from '../lib/dates'
+import { Segmented, Switch } from '../components/ui'
+
+function period(c, lang) {
+  const year = parseDate(c.start).getFullYear()
+  const range = `${formatDay(parseDate(c.start), lang)} – ${formatDay(parseDate(c.end), lang)}`
+  return lang === 'zh' ? `${year}年${range}` : `${range} ${year}`
+}
+
+function InfoRows({ rows }) {
+  return (
+    <dl className="info">
+      {rows.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}
+    </dl>
+  )
+}
 
 export default function Settings() {
   const { user, profile, updateProfile, signOut } = useAuth()
   const { lang, setLang, tr } = useLang()
-
-  const allKeys = Object.keys(PLATFORMS)
-  const [enabledPlatforms, setEnabledPlatforms] = useState(allKeys)
-  const [applied,  setApplied]  = useState(false)
-  const [saving,   setSaving]   = useState(false)
+  const { showToast } = useUI()
   const [loggingOut, setLoggingOut] = useState(false)
+  const [saving, setSaving] = useState(false)
 
-  // Init from profile
-  useEffect(() => {
-    if (profile?.enabled_platforms) {
-      // Normalize legacy keys (e.g. 樂享支付 → TaiFungPay) then filter to valid
-      const normalized = profile.enabled_platforms
-        .map(normalizePlatform)
-        .filter((k, i, arr) => allKeys.includes(k) && arr.indexOf(k) === i)
-      setEnabledPlatforms(normalized)
-      
-      // Auto-clean ghost/legacy platforms in DB
-      const changed = normalized.length !== profile.enabled_platforms.length ||
-        normalized.some((k, i) => k !== profile.enabled_platforms[i])
-      if (changed && updateProfile) {
-        updateProfile({ enabled_platforms: normalized }).catch(() => {})
-      }
-    }
-  }, [profile, allKeys, updateProfile])
+  const enabled = enabledPlatforms(profile)
+  const campaign = currentCampaign()
+  const previous = CAMPAIGNS.filter(c => c.id !== campaign.id)
 
-  function togglePlatform(key) {
-    setEnabledPlatforms(prev =>
-      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
-    )
-    setApplied(false)
-  }
-
-  async function handleApply() {
+  async function toggle(key, on) {
+    const next = on ? PLATFORM_KEYS.filter(k => k === key || enabled.includes(k)) : enabled.filter(k => k !== key)
     setSaving(true)
-    await updateProfile({ enabled_platforms: enabledPlatforms, language: lang })
+    const { error } = await updateProfile({ enabled_platforms: next })
     setSaving(false)
-    setApplied(true)
-    setTimeout(() => setApplied(false), 2000)
+    showToast(error ? tr.errGeneric : tr.platformSaved)
   }
 
-  async function handleLangChange(l) {
+  function changeLang(l) {
     setLang(l)
-    setApplied(false)
+    updateProfile({ language: l })
   }
-
-  async function handleLogout() {
-    setLoggingOut(true)
-    await signOut()
-  }
-
-  const INFO_ROWS = [
-    { label: tr.programPeriod, value: tr.programPeriodVal },
-    { label: tr.drawPeriod,    value: tr.drawPeriodVal },
-    { label: tr.usePeriod,     value: tr.usePeriodVal },
-    { label: tr.minSpend,      value: tr.minSpendVal },
-    { label: tr.weeklyLimit,   value: tr.weeklyLimitVal },
-    { label: tr.useRule,       value: tr.useRuleVal },
-  ]
 
   return (
-    <div className="min-h-screen bg-primary-50">
-      {/* Header */}
-      <div className="bg-primary-600 px-4 pt-12 pb-4 safe-top">
-        <h1 className="text-white font-bold text-xl">{tr.settingsTitle}</h1>
-      </div>
-
-      <div className="px-4 pt-4 space-y-4 pb-10">
-
-        {/* Account */}
-        <section className="card space-y-3">
-          <h2 className="font-semibold text-gray-700">{tr.account}</h2>
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-xs text-gray-400">{tr.yourEmail}</div>
-              <div className="text-sm text-gray-700 font-medium">{user?.email}</div>
-            </div>
-            <button
-              onClick={handleLogout}
-              disabled={loggingOut}
-              className="text-sm text-red-500 font-medium bg-red-50 px-3 py-1.5 rounded-xl disabled:opacity-50"
-            >
-              {loggingOut ? tr.loggingOut : tr.logout}
-            </button>
-          </div>
-        </section>
-
-        {/* Language */}
-        <section className="card space-y-3">
-          <h2 className="font-semibold text-gray-700">{tr.language}</h2>
-          <div className="flex gap-2">
-            {['zh', 'en'].map(l => (
-              <button
-                key={l}
-                onClick={() => handleLangChange(l)}
-                className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-colors
-                  ${lang === l ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-600'}`}
-              >
-                {tr[l]}
-              </button>
-            ))}
-          </div>
-        </section>
-
-        {/* Platforms */}
-        <section className="card space-y-3">
-          <div>
-            <h2 className="font-semibold text-gray-700">{tr.platformSettings}</h2>
-            <p className="text-xs text-gray-400 mt-0.5">{tr.platformHint}</p>
-          </div>
-          <div className="space-y-2">
-            {allKeys.map(key => {
-              const isEnabled = enabledPlatforms.includes(key)
-              return (
-                <label key={key} className="flex items-center justify-between py-1 cursor-pointer">
-                  <span className="text-sm text-gray-700">{PLATFORMS[key]?.[lang] ?? key}</span>
-                  <div
-                    onClick={() => togglePlatform(key)}
-                    className={`relative w-11 h-6 rounded-full transition-colors cursor-pointer
-                      ${isEnabled ? 'bg-primary-500' : 'bg-gray-200'}`}
-                  >
-                    <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform
-                      ${isEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
-                  </div>
-                </label>
-              )
-            })}
-          </div>
-
-          <button
-            onClick={handleApply}
-            disabled={saving}
-            className={`w-full py-2.5 rounded-xl text-sm font-semibold transition-colors
-              ${applied
-                ? 'bg-green-500 text-white'
-                : 'bg-primary-600 text-white disabled:opacity-50'
-              }`}
-          >
-            {applied ? tr.applied : saving ? '...' : tr.applySettings}
+    <>
+      <section className="hero">
+        <div>
+          <h1>{tr.settingsTitle}</h1>
+          <p className="summary">{user?.email}</p>
+        </div>
+        <div className="hero-actions">
+          <button type="button" className="capsule danger lens" disabled={loggingOut}
+            onClick={async () => { setLoggingOut(true); await signOut() }}>
+            {loggingOut ? tr.loggingOut : tr.logout}
           </button>
-        </section>
+        </div>
+      </section>
 
-        {/* Program info */}
-        <section className="card space-y-0">
-          <h2 className="font-semibold text-gray-700 mb-3">{tr.programInfo}</h2>
-          {INFO_ROWS.map(({ label, value }) => (
-            <div key={label} className="flex justify-between py-2 border-b border-gray-50 last:border-0">
-              <span className="text-sm text-gray-400">{label}</span>
-              <span className="text-sm text-gray-700 font-medium text-right max-w-[55%]">{value}</span>
-            </div>
-          ))}
-        </section>
+      <section className="settings-card">
+        <h2>{tr.language}</h2>
+        <Segmented label={tr.language} value={lang} onChange={changeLang}
+          options={[{ value: 'zh', label: tr.langZh }, { value: 'en', label: tr.langEn }]} />
+      </section>
 
-      </div>
-    </div>
+      <section className="settings-card">
+        <h2>{tr.platformSettings}</h2>
+        <p className="muted">{tr.platformHint}</p>
+        {PLATFORM_KEYS.map(key => (
+          <label key={key} className="row-field">
+            <span className="wallet-label">
+              <span className="wallet-dot" style={{ '--tint': PLATFORMS[key].tint }} aria-hidden="true" />
+              {PLATFORMS[key][lang]}
+            </span>
+            <Switch checked={enabled.includes(key)} disabled={saving} label={PLATFORMS[key][lang]}
+              onChange={on => toggle(key, on)} />
+          </label>
+        ))}
+      </section>
+
+      <section className="settings-card">
+        <h2>{tr.roundInfo} <small>{campaign.name[lang]}</small></h2>
+        <InfoRows rows={[
+          [tr.period,     period(campaign, lang)],
+          [tr.claimTime,  tr.claimTimeVal],
+          [tr.claimRule,  tr.claimRuleVal],
+          [tr.weeklyCap,  tr.weeklyCapVal],
+          [tr.useTime,    campaign.anyDayUse ? tr.useTimeNew : tr.useTimeOld],
+          [tr.useRule,    tr.useRuleVal],
+          [tr.clearRule,  tr.clearRuleVal],
+          [tr.faceValues, FACE_VALUES.join(' / ')],
+          ...(campaign.merchantVouchers ? [[tr.merchantVouchers, tr.merchantVal]] : []),
+          [tr.seniorCard, tr.seniorVal],
+        ]} />
+        {campaign.site && (
+          <InfoRows rows={[
+            [tr.officialSite, <a key="site" href={campaign.site} target="_blank" rel="noreferrer">{campaign.site.replace('https://', '')}</a>],
+            [tr.hotline, campaign.hotline],
+          ]} />
+        )}
+        <p className="caption">{tr.unconfirmed}</p>
+
+        {previous.map(c => (
+          <details key={c.id}>
+            <summary>{tr.previousRound} · {c.name[lang]}</summary>
+            <InfoRows rows={[
+              [tr.period,  period(c, lang)],
+              [tr.useTime, c.anyDayUse ? tr.useTimeNew : tr.useTimeOld],
+            ]} />
+          </details>
+        ))}
+      </section>
+    </>
   )
 }
