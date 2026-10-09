@@ -1,26 +1,26 @@
 <!doctype html>
-<html lang="zh-HK">
+<html lang="zh-Hant-HK">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <meta name="theme-color" content="#7c3aed" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+    <meta name="theme-color" content="#d9e8f2" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <meta name="apple-mobile-web-app-title" content="MO Rewards" />
-    <link rel="apple-touch-icon" href="/Coupons/icon-192.png" />
-    <title>澳門消費大獎賞 | Macau Rewards</title>
-    <!-- NUKE all service workers & caches - fixes stale PWA showing old platform names -->
+    <meta name="apple-mobile-web-app-title" content="消費獎賞" />
+    <link rel="icon" href="/Coupons/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/Coupons/apple-touch-icon.png" />
+    <link rel="manifest" href="/Coupons/manifest.webmanifest" />
+    <title>消費獎賞 | MO Rewards</title>
+    <!-- Remove any service worker left over from the old PWA build -->
     <script>
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(function(regs) {
+        navigator.serviceWorker.getRegistrations().then(function (regs) {
           var killed = false;
-          regs.forEach(function(r) { r.unregister(); killed = true; });
+          regs.forEach(function (r) { r.unregister(); killed = true; });
           if ('caches' in window) {
-            caches.keys().then(function(names) {
-              names.forEach(function(n) { caches.delete(n); killed = true; });
-            });
+            caches.keys().then(function (names) { names.forEach(function (n) { caches.delete(n); }); });
           }
-          // If we killed anything, force a clean reload (once only)
           if (killed && !sessionStorage.getItem('sw_nuked')) {
             sessionStorage.setItem('sw_nuked', '1');
             location.reload();
@@ -28,8 +28,8 @@
         });
       }
     </script>
-    <script type="module" crossorigin src="/Coupons/assets/index-Bdb1eLBN.js"></script>
-    <link rel="stylesheet" crossorigin href="/Coupons/assets/index-Cfi-dxRm.css">
+    <script type="module" crossorigin src="/Coupons/assets/index-C8lFJA70.js"></script>
+    <link rel="stylesheet" crossorigin href="/Coupons/assets/index-BCiVnuvy.css">
   </head>
   <body>
     <div id="root"></div>
