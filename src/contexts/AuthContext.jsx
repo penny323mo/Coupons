@@ -56,12 +56,20 @@ export function AuthProvider({ children }) {
     return { data, error }
   }
 
+  /** Google OAuth; returns to the app root, where main.jsx picks the session out of the URL. */
+  async function signInWithGoogle() {
+    return supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: `${window.location.origin}${import.meta.env.BASE_URL}` },
+    })
+  }
+
   async function signOut() {
     await supabase.auth.signOut()
   }
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, refreshProfile, updateProfile, signOut }}>
+    <AuthContext.Provider value={{ user, profile, loading, refreshProfile, updateProfile, signInWithGoogle, signOut }}>
       {children}
     </AuthContext.Provider>
   )

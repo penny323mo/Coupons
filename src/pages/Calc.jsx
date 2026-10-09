@@ -1,16 +1,20 @@
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useLang } from '../contexts/LangContext'
 import { useCoupons } from '../contexts/CouponsContext'
+import { useUI } from '../contexts/UIContext'
 import { enabledPlatforms, platformLabel } from '../lib/platforms'
-import { couponKind, canUseOn, currentCampaign } from '../lib/dates'
+import { couponKind, canUseOn, currentCampaign, todayStr } from '../lib/dates'
 import { planRedemption } from '../lib/redeem'
 import { Switch } from '../components/ui'
 
 export default function Calc() {
   const { profile } = useAuth()
   const { lang, tr } = useLang()
-  const { coupons } = useCoupons()
+  const { coupons, updateCoupons } = useCoupons()
+  const { showToast } = useUI()
+  const [params] = useSearchParams()
 
   const usable = coupons.filter(c => couponKind(c) === 'gov' && canUseOn(c))
   const wallets = enabledPlatforms(profile)
@@ -19,13 +23,24 @@ export default function Calc() {
     usable.filter(c => c.platform === b).reduce((s, c) => s + c.face_value, 0)
     - usable.filter(c => c.platform === a).reduce((s, c) => s + c.face_value, 0))[0] ?? ''
 
-  const [platform, setPlatform] = useState(richest)
+  const [platform, setPlatform] = useState(wallets.includes(params.get('w')) ? params.get('w') : richest)
   const [amount,   setAmount]   = useState('')
   const [merchant, setMerchant] = useState(false)
 
   const pool = usable.filter(c => c.platform === platform)
   const plan = planRedemption({ amount, coupons: pool, merchantDiscount: merchant })
   const showMerchant = currentCampaign().merchantVouchers
+
+  async function redeem() {
+    const ids = plan.used.map(c => c.id)
+    const { error } = await updateCoupons(ids, { status: 'used', used_date: todayStr() })
+    if (error) { showToast(tr.errGeneric); return }
+    setAmount('')
+    showToast(tr.usedMany(ids.length, plan.voucherTotal), {
+      label: tr.undo,
+      run: () => updateCoupons(ids, { status: 'unused', used_date: null }),
+    })
+  }
 
   return (
     <>
@@ -72,10 +87,13 @@ export default function Calc() {
               <div className="total"><dt>{tr.calcPay}</dt><dd>MOP {plan.pay.toFixed(1)}</dd></div>
             </dl>
             {plan.gross > 0 && (plan.used.length
-              ? <div className="chips used">
+              ? <><div className="chips used">
                   <span className="muted">{tr.calcUses}</span>
                   {plan.used.map(c => <span key={c.id} className="chip on">{c.face_value}</span>)}
                 </div>
+                <button type="button" className="primary-btn wide" onClick={redeem}>
+                  {tr.redeemNow(plan.used.length, plan.voucherTotal)}
+                </button></>
               : <p className="note warn">{tr.calcNone}</p>)}
             <p className="muted">{tr.calcAll(plan.allValue, plan.spendToUseAll)}</p>
           </>

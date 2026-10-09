@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useLang } from '../contexts/LangContext'
 import { useUI } from '../contexts/UIContext'
@@ -15,12 +15,14 @@ import { Battery, Spinner } from '../components/ui'
 function WalletCard({ platform, coupons }) {
   const { lang, tr } = useLang()
   const { openAdd } = useUI()
+  const navigate = useNavigate()
   const info = PLATFORMS[platform]
   const claimed = coupons.filter(c => couponKind(c) === 'gov' && isInClaimWindow(c)).length
   const active = coupons.filter(c => effectiveStatus(c) === 'unused')
   const activeGov = active.filter(c => couponKind(c) === 'gov')
   const activeTotal = activeGov.reduce((s, c) => s + c.face_value, 0)
   const usable = active.some(c => canUseOn(c))
+  const usableGov = activeGov.some(c => canUseOn(c))
   const full = claimed >= WEEKLY_CLAIMS
 
   return (
@@ -41,6 +43,9 @@ function WalletCard({ platform, coupons }) {
         <small className="quota-note">{tr.count(activeGov.length)}</small>
       </div>
       <div className="card-bottom">
+        {usableGov && (
+          <button type="button" className="card-use go" onClick={() => navigate(`/calc?w=${platform}`)}>{tr.walletUse}</button>
+        )}
         <button type="button" className="card-use" onClick={() => openAdd({ platform })}>{tr.walletRecord}</button>
       </div>
     </article>

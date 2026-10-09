@@ -63,11 +63,15 @@ export function Sheet({ title, onClose, children, className = '' }) {
 
 /** Top-of-screen glass toast with a green tick. */
 export function Toast() {
-  const { toast } = useUI()
+  const { toast, hideToast } = useUI()
   if (!toast) return null
   return (
-    <div key={toast.key} className="toast show" role="status" aria-live="polite">
-      <span className="tick" aria-hidden="true">✓</span>{toast.text}
+    <div key={toast.key} className={`toast show${toast.action ? ' with-action' : ''}`} role="status" aria-live="polite">
+      <span className="tick" aria-hidden="true">✓</span>
+      <span className="toast-text">{toast.text}</span>
+      {toast.action && (
+        <button type="button" onClick={() => { hideToast(); toast.action.run() }}>{toast.action.label}</button>
+      )}
     </div>
   )
 }

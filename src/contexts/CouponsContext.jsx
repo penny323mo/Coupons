@@ -51,30 +51,37 @@ export function CouponsProvider({ children }) {
     return () => document.removeEventListener('visibilitychange', onVisible)
   }, [refresh])
 
-  async function addCoupon(fields) {
-    const row = { user_id: user.id, status: 'unused', ...fields }
-    // Government vouchers omit `kind` so they still save before the migration runs
-    if (row.kind === 'gov') delete row.kind
-    const { error } = await supabase.from('coupons').insert(row)
+  /** Insert one row or several (a batch of vouchers drawn in one go). */
+  async function addCoupons(fields) {
+    const rows = (Array.isArray(fields) ? fields : [fields]).map(f => {
+      const row = { user_id: user.id, status: 'unused', ...f }
+      // Government vouchers omit `kind` so they still save before the migration runs
+      if (row.kind === 'gov') delete row.kind
+      return row
+    })
+    const { error } = await supabase.from('coupons').insert(rows)
     if (error) return { error, needsMigration: NEEDS_MIGRATION.has(error.code) }
     await refresh()
     return {}
   }
 
-  async function updateCoupon(id, updates) {
-    const { error } = await supabase.from('coupons').update(updates).eq('id', id)
-    if (!error) await refresh()
+  /** Update one or many rows; the list changes at once and rolls back if the server refuses. */
+  async function updateCoupons(ids, updates) {
+    const list = Array.isArray(ids) ? ids : [ids]
+    setCoupons(prev => prev.map(c => list.includes(c.id) ? { ...c, ...updates } : c))
+    const { error } = await supabase.from('coupons').update(updates).in('id', list)
+    if (error) await refresh()
     return { error }
   }
 
   async function deleteCoupon(id) {
     const { error } = await supabase.from('coupons').delete().eq('id', id)
-    if (!error) await refresh()
+    if (!error) setCoupons(prev => prev.filter(c => c.id !== id))
     return { error }
   }
 
   return (
-    <CouponsContext.Provider value={{ coupons, loading, refresh, addCoupon, updateCoupon, deleteCoupon }}>
+    <CouponsContext.Provider value={{ coupons, loading, refresh, addCoupons, updateCoupons, deleteCoupon }}>
       {children}
     </CouponsContext.Provider>
   )

@@ -24,7 +24,7 @@ function Tile({ coupon, kind, status }) {
 export default function CouponRow({ coupon }) {
   const { lang, tr } = useLang()
   const { showToast } = useUI()
-  const { updateCoupon, deleteCoupon } = useCoupons()
+  const { updateCoupons, deleteCoupon } = useCoupons()
   const [sheet, setSheet] = useState(null) // 'actions' | 'use' | 'delete'
   const [usedDate, setUsedDate] = useState(todayStr())
   const [store, setStore] = useState(coupon.store_name ?? '')
@@ -59,10 +59,20 @@ export default function CouponRow({ coupon }) {
     if (!error) { setSheet(null); showToast(toast) }
   }
 
-  const markUsed = () => run(() => updateCoupon(coupon.id, {
+  const restore = { status: 'unused', used_date: null, store_name: coupon.store_name ?? null }
+  const undo = { label: tr.undo, run: () => updateCoupons(coupon.id, restore) }
+
+  // One tap at the till: mark used today, with an undo in the toast
+  async function quickUse() {
+    setSheet(null)
+    const { error } = await updateCoupons(coupon.id, { status: 'used', used_date: todayStr() })
+    showToast(error ? tr.errGeneric : tr.usedOne(title), error ? undefined : undo)
+  }
+
+  const saveDetails = () => run(() => updateCoupons(coupon.id, {
     status: 'used', used_date: usedDate, store_name: store.trim() || null,
   }), tr.savedUse)
-  const undoUse = () => run(() => updateCoupon(coupon.id, { status: 'unused', used_date: null }), tr.saved)
+  const undoUse = () => run(() => updateCoupons(coupon.id, restore), tr.saved)
   const remove = () => run(() => deleteCoupon(coupon.id), tr.deleted)
 
   return (
@@ -79,7 +89,7 @@ export default function CouponRow({ coupon }) {
         </button>
         <div className="coupon-side">
           {status === 'unused'
-            ? <button type="button" className="use-btn" onClick={() => setSheet('use')}>{tr.use}</button>
+            ? <button type="button" className="use-btn" onClick={quickUse}>{tr.use}</button>
             : <span className={`badge ${status}`}>{tr[status]}</span>}
         </div>
       </article>
@@ -88,7 +98,11 @@ export default function CouponRow({ coupon }) {
         <Sheet title={title} onClose={() => setSheet(null)} className="action-sheet">
           <p className="sheet-text">{sub}{meta ? `\n${meta}` : ''}</p>
           <div className="sheet-actions">
-            {status === 'unused' && <button type="button" onClick={() => setSheet('use')}>{tr.markUsed}</button>}
+            {status === 'unused' && <button type="button" onClick={quickUse}>{tr.useToday}</button>}
+            {status === 'unused' && <button type="button" onClick={() => setSheet('use')}>{tr.useWithDetails}</button>}
+            {status === 'used' && <button type="button" onClick={() => {
+              setUsedDate(coupon.used_date ?? todayStr()); setSheet('use')
+            }}>{tr.editDetails}</button>}
             {status === 'used' && <button type="button" onClick={undoUse} disabled={busy}>{tr.undoUse}</button>}
             <button type="button" className="danger" onClick={() => setSheet('delete')}>{tr.delete}</button>
             <button type="button" className="cancel" onClick={() => setSheet(null)}>{tr.cancel}</button>
@@ -126,7 +140,7 @@ export default function CouponRow({ coupon }) {
           </label>
           <div className="sheet-actions row">
             <button type="button" className="glass-btn" onClick={() => setSheet(null)}>{tr.cancel}</button>
-            <button type="button" className="primary-btn" onClick={markUsed} disabled={busy || !usedDate}>{tr.confirm}</button>
+            <button type="button" className="primary-btn" onClick={saveDetails} disabled={busy || !usedDate}>{tr.confirm}</button>
           </div>
         </Sheet>
       )}
