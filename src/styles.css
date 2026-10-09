@@ -1199,3 +1199,39 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 .topbar { height: 54px; }
 .topbar .logo { width: 48px; height: 48px; border-radius: 15px; }
 .topbar .logo img { width: 40px; height: 40px; }
+
+/* ---------- Brand header ---------- */
+.topbar .brand { gap: 12px; }
+.topbar .logo {
+  width: 50px;
+  height: 50px;
+  border-radius: 16px;
+  box-shadow: inset 0 1.5px 2px #fff, inset 0 -1.5px 3px #7d93bd4d, 0 6px 18px #ef6a5540, 0 0 0 4px #ffffff40;
+}
+.topbar .logo img { width: 46px; height: 46px; filter: drop-shadow(0 2px 3px #b5502f40); }
+.brand-text {
+  font-size: 23px;
+  font-weight: 800;
+  letter-spacing: .5px;
+  line-height: 1.1;
+}
+.brand-name {
+  background: linear-gradient(110deg, #19334e 0%, #1f5fc8 55%, #5a54f0 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.brand small {
+  align-self: flex-start;
+  margin-top: 5px;
+  padding: 2px 9px 2px 8px;
+  border-radius: 20px;
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: .3px;
+  color: #2f63c8;
+  background: linear-gradient(120deg, #ffffffb0, #e3efffa0);
+  border: 1px solid #ffffffd0;
+  box-shadow: inset 0 1px 1px #fff, 0 2px 6px #2a4a6a14;
+  -webkit-text-fill-color: #2f63c8;
+}

@@ -36,7 +36,7 @@ export default function Layout() {
         <a className="brand" href={`${BASE}#/`} aria-label={tr.appName}>
           <span className="logo"><img src={`${BASE}icon.svg`} alt="" /></span>
           <span className="brand-text">
-            {tr.appName}
+            <span className="brand-name">{tr.appName}</span>
             <small>{campaign.name[lang]}</small>
           </span>
         </a>
