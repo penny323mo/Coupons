@@ -6,24 +6,53 @@ import { useCoupons } from '../contexts/CouponsContext'
 import { PLATFORMS, enabledPlatforms, platformLabel } from '../lib/platforms'
 import {
   currentCampaign, campaignState, campaignWeek, isClaimDay, isInClaimWindow, claimWindow,
-  effectiveStatus, couponKind, canUseOn, parseDate, formatDay, WEEKLY_CLAIMS,
+  effectiveStatus, couponKind, canUseOn, parseDate, formatDay, todayStr, WEEKLY_CLAIMS,
   roundNumber, archivedCampaigns, couponsOfCampaign, roundStats,
 } from '../lib/dates'
-import CouponRow from '../components/CouponRow'
-import { Battery, Spinner } from '../components/ui'
+import { USE_MULTIPLE } from '../lib/campaigns'
+import { Battery } from '../components/ui'
+
+function VoucherChip({ coupon, onUse }) {
+  const { tr } = useLang()
+  const kind = couponKind(coupon)
+  const label = kind === 'gov'
+    ? tr.useChip(coupon.face_value, coupon.face_value * USE_MULTIPLE)
+    : `${tr[kind]}${coupon.store_name ? ` · ${coupon.store_name}` : ''}`
+  return (
+    <button type="button" className={`vchip ${kind}`} onClick={() => onUse(coupon)} aria-label={label} title={label}>
+      {kind === 'gov' && <><strong>{coupon.face_value}</strong><small>{tr.chipMin(coupon.face_value * USE_MULTIPLE)}</small></>}
+      {kind === 'merchant_discount' && <><strong>−{coupon.face_value}</strong><small>{tr.chipDeal}</small></>}
+      {kind === 'merchant_gift' && <><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 11h16v9H4zM3 7.5h18V11H3zM12 7.5V20M12 7.5S10.5 3.5 8 4.2 7.6 7.5 12 7.5Zm0 0s1.5-4 4-3.3.4 3.3-4 3.3Z" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" /></svg><small>{tr.chipGift}</small></>}
+    </button>
+  )
+}
 
 function WalletCard({ platform, coupons }) {
   const { lang, tr } = useLang()
-  const { openAdd } = useUI()
+  const { openAdd, showToast } = useUI()
+  const { updateCoupons } = useCoupons()
   const navigate = useNavigate()
   const info = PLATFORMS[platform]
   const claimed = coupons.filter(c => couponKind(c) === 'gov' && isInClaimWindow(c)).length
-  const active = coupons.filter(c => effectiveStatus(c) === 'unused')
+  const active = coupons
+    .filter(c => effectiveStatus(c) === 'unused')
+    .sort((a, b) => KIND_ORDER[couponKind(a)] - KIND_ORDER[couponKind(b)] || b.face_value - a.face_value)
   const activeGov = active.filter(c => couponKind(c) === 'gov')
   const activeTotal = activeGov.reduce((s, c) => s + c.face_value, 0)
   const usable = active.some(c => canUseOn(c))
   const usableGov = activeGov.some(c => canUseOn(c))
   const full = claimed >= WEEKLY_CLAIMS
+
+  // One tap at the till: mark used today, with an undo in the toast
+  async function use(coupon) {
+    const { error } = await updateCoupons(coupon.id, { status: 'used', used_date: todayStr() })
+    if (error) { showToast(tr.errSave(error.message), undefined, 'error'); return }
+    const what = couponKind(coupon) === 'gov' ? `MOP ${coupon.face_value}` : tr[couponKind(coupon)]
+    showToast(tr.usedOne(`${what}（${info.short}）`), {
+      label: tr.undo,
+      run: () => updateCoupons(coupon.id, { status: 'unused', used_date: null }),
+    })
+  }
 
   return (
     <article className={`card wallet${usable ? ' active' : ''}`}>
@@ -40,8 +69,12 @@ function WalletCard({ platform, coupons }) {
       </div>
       <div className="quota">
         <div className="quota-head"><strong>{activeTotal}</strong><span>{tr.activeValue}</span></div>
-        <small className="quota-note">{tr.count(activeGov.length)}</small>
       </div>
+      {active.length > 0 && (
+        <div className="vchips" role="group" aria-label={tr.activeList}>
+          {active.map(c => <VoucherChip key={c.id} coupon={c} onUse={use} />)}
+        </div>
+      )}
       <div className="card-bottom">
         {usableGov && (
           <button type="button" className="card-use go" onClick={() => navigate(`/calc?w=${platform}`)}>{tr.walletUse}</button>
@@ -51,6 +84,8 @@ function WalletCard({ platform, coupons }) {
     </article>
   )
 }
+
+const KIND_ORDER = { gov: 0, merchant_discount: 1, merchant_gift: 2 }
 
 export default function Dashboard() {
   const { profile } = useAuth()
@@ -80,11 +115,6 @@ export default function Dashboard() {
   const active = roundCoupons
     .filter(c => effectiveStatus(c) === 'unused')
     .sort((a, b) => b.face_value - a.face_value)
-  // Group by wallet, in the same order as the wallet cards, so each till payment reads as one block
-  const walletOrder = [...wallets, ...active.map(c => c.platform).filter(p => !wallets.includes(p))]
-  const groups = walletOrder
-    .map(p => ({ platform: p, items: active.filter(c => c.platform === p) }))
-    .filter(g => g.items.length > 0)
   const usableValue = active.filter(c => couponKind(c) === 'gov' && canUseOn(c)).reduce((s, c) => s + c.face_value, 0)
 
   return (
@@ -118,7 +148,7 @@ export default function Dashboard() {
       <section>
         <div className="section-heading">
           <h2>{tr.wallets}</h2>
-          <span className="muted">{tr.walletsHint}</span>
+          <span className="muted">{tr.walletsTapHint}</span>
         </div>
         {wallets.length === 0
           ? <article className="card notice">{tr.noWallets}</article>
@@ -129,38 +159,6 @@ export default function Dashboard() {
               ))}
             </div>
           )}
-      </section>
-
-      <section>
-        <div className="section-heading">
-          <h2>{tr.activeList}</h2>
-          <span className="muted">{tr.activeListHint}</span>
-        </div>
-        {loading ? (
-          <div className="card empty"><Spinner /></div>
-        ) : active.length === 0 ? (
-          <div className="card empty">
-            <strong>{tr.noActive}</strong>
-            <p>{tr.noActiveHint}</p>
-          </div>
-        ) : (
-          <div className="wallet-groups">
-            {groups.map(g => (
-              <div key={g.platform} className="wallet-group">
-                <div className="group-head">
-                  <span className="wallet-dot" style={{ '--tint': PLATFORMS[g.platform]?.tint }} aria-hidden="true" />
-                  <strong>{platformLabel(g.platform, lang)}</strong>
-                  <span className="muted">
-                    MOP {g.items.filter(c => couponKind(c) === 'gov').reduce((t, c) => t + c.face_value, 0)} · {tr.count(g.items.length)}
-                  </span>
-                </div>
-                <div className="list">
-                  {g.items.map(c => <CouponRow key={c.id} coupon={c} hideWallet />)}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
       </section>
 
       {archive.length > 0 && (
