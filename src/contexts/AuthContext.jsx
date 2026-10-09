@@ -18,8 +18,11 @@ export function AuthProvider({ children }) {
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null)
-      if (session?.user) fetchProfile(session.user.id)
+      // Keep the same object for the same person so token refreshes don't refetch everything
+      const next = session?.user ?? null
+      setUser(prev => (prev?.id === next?.id ? prev : next))
+      // Defer: calling Supabase from inside this callback can deadlock the auth lock
+      if (session?.user) setTimeout(() => fetchProfile(session.user.id), 0)
       else {
         setProfile(null)
         setLoading(false)

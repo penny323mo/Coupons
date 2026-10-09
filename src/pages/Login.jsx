@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Navigate } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
+import { supabase, withTimeout } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { useLang } from '../contexts/LangContext'
 import { currentCampaign } from '../lib/dates'
@@ -47,13 +47,13 @@ export default function Login() {
     setLoading(true)
     try {
       if (mode === 'login') {
-        const { error: err } = await supabase.auth.signInWithPassword({ email, password })
+        const { error: err } = await withTimeout(supabase.auth.signInWithPassword({ email, password }))
         if (err) setError(err.message)
       } else {
-        const { data, error: err } = await supabase.auth.signUp({
+        const { data, error: err } = await withTimeout(supabase.auth.signUp({
           email, password,
           options: { emailRedirectTo: `${window.location.origin}${import.meta.env.BASE_URL}` },
-        })
+        }))
         if (err) { setError(err.message); return }
         if (name && data.user) {
           await supabase.from('profiles').update({ display_name: name }).eq('id', data.user.id)
@@ -61,6 +61,8 @@ export default function Login() {
         // No session = email confirmation required
         if (!data.session) setEmailSent(true)
       }
+    } catch (e) {
+      setError(e.message === 'timeout' ? tr.errTimeout : tr.errGeneric)
     } finally {
       setLoading(false)
     }

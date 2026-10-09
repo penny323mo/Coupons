@@ -221,6 +221,7 @@ export const t = {
     errPwdMatch:  '兩次密碼唔一樣',
     errPwdLength: '密碼最少 6 位',
     errGeneric:   '出咗錯，請再試',
+    errTimeout:   '伺服器冇回應，請檢查網絡再試一次。',
   },
 
   en: {
@@ -431,5 +432,6 @@ export const t = {
     errPwdMatch:  'Passwords do not match',
     errPwdLength: 'Password must be at least 6 characters',
     errGeneric:   'Something went wrong. Please try again.',
+    errTimeout:   'The server did not respond. Check your connection and try again.',
   },
 }
